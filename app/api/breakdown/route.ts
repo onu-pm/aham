@@ -1,9 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const SYSTEM = `You help people with ADHD and other neurodivergent minds start tasks that feel too big.
+const SYSTEMS = {
+  task: `You help people with ADHD and other neurodivergent minds start tasks that feel too big.
 Break the user's task into 3 to 7 tiny, concrete, physical next actions, in order.
 Each step should take under 10 minutes, start with a verb, and be at most 8 words.
-Make the first step almost effortless so it is easy to begin. Keep the tone kind and plain.`;
+Make the first step almost effortless so it is easy to begin. Keep the tone kind and plain.`,
+  habit: `You help people with ADHD and other neurodivergent minds build habits that stick.
+Turn the user's habit into a short daily routine of 2 to 5 tiny micro-steps they repeat each day, in order.
+Step one is the cue or setup, and step two is a 2-minute starter version of the habit.
+Each step starts with a verb and is at most 8 words. Keep the tone kind and plain.`,
+};
 
 const schema = {
   type: "object",
@@ -17,6 +23,7 @@ const schema = {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const task = typeof body?.task === "string" ? body.task.trim() : "";
+  const kind: keyof typeof SYSTEMS = body?.kind === "habit" ? "habit" : "task";
   if (!task || task.length > 300) return Response.json({ error: "Send a task under 300 characters." }, { status: 400 });
 
   let client: Anthropic;
@@ -34,7 +41,7 @@ export async function POST(req: Request) {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "low", format: { type: "json_schema", schema } },
-      system: SYSTEM,
+      system: SYSTEMS[kind],
       messages: [{ role: "user", content: task }],
     });
 

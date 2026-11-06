@@ -19,7 +19,19 @@ export type Item = {
   unit: string | null;
   total: number | null;
   progress: number;
+  /** Tasks: the day it's planned for. Habits: unused (they repeat daily). */
+  date?: string | null;
+  /** "HH:MM", optional. Tasks: when. Habits: daily reminder time. */
+  time?: string | null;
+  remind?: boolean;
+  /** Habits: which micro-steps were done on each day, since they reset daily */
+  stepLog?: Record<string, string[]>;
 };
+
+/** Whether a step is done; habit steps are tracked per day */
+export function stepDone(item: Item, stepId: string, key: string): boolean {
+  return item.kind === "habit" ? !!item.stepLog?.[key]?.includes(stepId) : !!item.steps.find((s) => s.id === stepId)?.done;
+}
 
 export type Entry = {
   id: string;
@@ -35,7 +47,7 @@ export type Entry = {
 export type Folder = { id: string; name: string; emoji: string };
 
 export type TextSize = 0 | 1 | 2;
-export const TEXT_SIZES_PX = [18, 20, 22];
+export const TEXT_SIZES_PX = [16, 17.5, 19];
 
 export type Profile = { name: string; avatar: string; textSize: TextSize };
 
@@ -146,7 +158,7 @@ function load(): State {
   return seedState();
 }
 
-export type NewItem = Pick<Item, "title" | "emoji" | "pillar" | "kind"> & Partial<Pick<Item, "steps" | "unit" | "total">>;
+export type NewItem = Pick<Item, "title" | "emoji" | "pillar" | "kind"> & Partial<Pick<Item, "steps" | "unit" | "total" | "date" | "time" | "remind">>;
 export type NewEntry = Pick<Entry, "title" | "body" | "mood" | "pillar" | "folderId">;
 
 export function useAham() {
@@ -209,6 +221,16 @@ export function useAham() {
   const toggleStep = useCallback(
     (id: string, stepId: string) =>
       mapItem(id, (i) => {
+        if (i.kind === "habit") {
+          // Habit micro-steps reset each day; finishing them all checks off today
+          const log = i.stepLog?.[todayKey] ?? [];
+          const next = log.includes(stepId) ? log.filter((s) => s !== stepId) : [...log, stepId];
+          const allDone = i.steps.length > 0 && i.steps.every((st) => next.includes(st.id));
+          const wasAllDone = i.steps.length > 0 && i.steps.every((st) => log.includes(st.id));
+          // Only un-check the day if it was checked by finishing the steps
+          const done = allDone ? [...new Set([...i.done, todayKey])] : wasAllDone ? i.done.filter((k) => k !== todayKey) : i.done;
+          return { ...i, stepLog: { ...i.stepLog, [todayKey]: next }, done };
+        }
         const steps = i.steps.map((st) => (st.id === stepId ? { ...st, done: !st.done } : st));
         // Finishing the last step finishes the task
         const allDone = steps.length > 0 && steps.every((st) => st.done);
@@ -299,9 +321,21 @@ export function isDoneOn(item: Item, key: string): boolean {
   return item.done.includes(key);
 }
 
-/** What shows on a given day: habits and goals always; tasks while open (today) or on the day they were finished */
+/** The day a task belongs to: its planned date, else today while open */
+export function taskDay(item: Item, todayKey: string): string {
+  if (item.done.length) return item.done[0];
+  const d = item.date ?? todayKey;
+  // Unfinished tasks from the past roll forward to today
+  return d < todayKey ? todayKey : d;
+}
+
+/** What shows on a given day: habits and goals always; tasks on their day */
 export function itemsForDay(items: Item[], key: string, todayKey: string): Item[] {
-  return items.filter((i) => (i.kind !== "task" ? true : i.done.length ? i.done[0] === key : key === todayKey));
+  return items.filter((i) => (i.kind !== "task" ? true : taskDay(i, todayKey) === key));
+}
+
+export function byTime(a: Item, b: Item): number {
+  return (a.time ?? "99:99").localeCompare(b.time ?? "99:99");
 }
 
 function streak(pred: (key: string) => boolean): number {

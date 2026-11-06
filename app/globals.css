@@ -9,20 +9,19 @@
   --color-brand-500: #8f7cf0;
   --color-brand-600: #7462e0;
   --color-brand-700: #5947bd;
-  --color-ink: #161613;
-  --color-muted: #6c6877;
+  --color-ink: #1d1b26;
+  --color-muted: #6f6b7b;
   --color-line: #ebe9f0;
   --color-surface: #f3f1f7;
   --color-canvas: #faf9fc;
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --shadow-soft: 0 1px 2px rgb(22 22 19 / 0.04), 0 10px 30px -14px rgb(60 40 140 / 0.14);
+  --font-sans: var(--font-nunito), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --shadow-soft: 0 1px 2px rgb(29 27 38 / 0.04), 0 8px 24px -12px rgb(60 40 140 / 0.12);
 }
 
 :root {
   color-scheme: light;
-  /* Root size drives every rem; the in-app text size control changes it */
-  font-size: 18px;
+  /* Root size drives every rem; the text size setting in Me changes it */
+  font-size: 16px;
 }
 
 html,
@@ -34,17 +33,8 @@ body {
 
 body {
   font-family: var(--font-sans);
+  font-weight: 500;
   line-height: 1.5;
-}
-
-/* Fraunces at full softness reads warm and rounded */
-.font-display {
-  font-variation-settings:
-    "SOFT" 100,
-    "WONK" 0,
-    "opsz" 30;
-  font-weight: 480;
-  letter-spacing: -0.02em;
 }
 
 /* iOS zooms on inputs under 16px */
@@ -75,19 +65,25 @@ input[type="number"] {
   padding-bottom: max(env(safe-area-inset-bottom), 12px);
 }
 
-@keyframes breathe {
-  0%,
-  100% {
-    transform: scale(0.92);
-    opacity: 0.35;
-  }
-  50% {
-    transform: scale(1.04);
-    opacity: 0.8;
-  }
+.no-scrollbar {
+  scrollbar-width: none;
 }
-.animate-breathe {
-  animation: breathe 8s ease-in-out infinite;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Accordion: animates height from 0 to auto */
+.drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.drawer[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.drawer > * {
+  overflow: hidden;
+  min-height: 0;
 }
 
 @keyframes sheet-up {
@@ -107,6 +103,16 @@ input[type="number"] {
 }
 .animate-pop {
   animation: pop 0.25s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.animate-in {
+  animation: fade-in 0.3s ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
