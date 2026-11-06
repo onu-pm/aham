@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Soft lavender palette. Swap brand-* to retheme. */
+@theme {
+  --color-brand-50: #f6f4ff;
+  --color-brand-100: #ece8fe;
+  --color-brand-200: #dcd4fc;
+  --color-brand-300: #c3b6f8;
+  --color-brand-500: #8f7cf0;
+  --color-brand-600: #7462e0;
+  --color-brand-700: #5947bd;
+  --color-ink: #161613;
+  --color-muted: #6c6877;
+  --color-line: #ebe9f0;
+  --color-surface: #f3f1f7;
+  --color-canvas: #faf9fc;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --shadow-soft: 0 1px 2px rgb(22 22 19 / 0.04), 0 10px 30px -14px rgb(60 40 140 / 0.14);
+}
+
+:root {
+  color-scheme: light;
+  /* Root size drives every rem; the in-app text size control changes it */
+  font-size: 18px;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+/* Fraunces at full softness reads warm and rounded */
+.font-display {
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 0,
+    "opsz" 30;
+  font-weight: 480;
+  letter-spacing: -0.02em;
+}
+
+/* iOS zooms on inputs under 16px */
+@layer base {
+  input,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-brand-300);
+    outline-offset: 2px;
+  }
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-nav {
+  padding-bottom: max(env(safe-area-inset-bottom), 12px);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.8;
+  }
+}
+.animate-breathe {
+  animation: breathe 8s ease-in-out infinite;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+.animate-sheet {
+  animation: sheet-up 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(1.15);
+  }
+}
+.animate-pop {
+  animation: pop 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
