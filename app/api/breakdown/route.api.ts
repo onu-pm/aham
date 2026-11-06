@@ -20,7 +20,24 @@ const schema = {
   additionalProperties: false,
 };
 
+// The Android app calls this from its own origin, so allow cross-origin requests
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS });
+}
+
 export async function POST(req: Request) {
+  const res = await handle(req);
+  Object.entries(CORS).forEach(([k, v]) => res.headers.set(k, v));
+  return res;
+}
+
+async function handle(req: Request): Promise<Response> {
   const body = await req.json().catch(() => null);
   const task = typeof body?.task === "string" ? body.task.trim() : "";
   const kind: keyof typeof SYSTEMS = body?.kind === "habit" ? "habit" : "task";

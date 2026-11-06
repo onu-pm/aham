@@ -32,9 +32,14 @@ export function localBreakdown(title: string, kind: "task" | "habit" = "task"): 
     : ["Get what you need in one place", "Do the easiest 2 minute part", "Keep going for 10 minutes", "Take a short break", "Finish the last bit and tick it off"];
 }
 
+// Web build: same server. Android app: set NEXT_PUBLIC_API_BASE to the hosted web app, or leave empty for offline-only
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
+const isAppBuild = process.env.NEXT_PUBLIC_BUILD_TARGET === "app";
+
 export async function breakDown(title: string, kind: "task" | "habit" = "task"): Promise<{ steps: string[]; ai: boolean }> {
+  if (isAppBuild && !API_BASE) return { steps: localBreakdown(title, kind), ai: false };
   try {
-    const res = await fetch("/api/breakdown", {
+    const res = await fetch(`${API_BASE}/api/breakdown`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ task: title, kind }),

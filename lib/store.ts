@@ -49,7 +49,7 @@ export type Folder = { id: string; name: string; emoji: string };
 export type TextSize = 0 | 1 | 2;
 export const TEXT_SIZES_PX = [16, 17.5, 19];
 
-export type Profile = { name: string; avatar: string; textSize: TextSize };
+export type Profile = { name: string; avatar: string; textSize: TextSize; onboarded: boolean };
 
 export type State = {
   items: Item[];
@@ -83,29 +83,25 @@ export function uid(): string {
 
 function seedState(): State {
   return {
-    items: [
-      {
-        id: uid(),
-        title: "Speech drill 3 min",
-        emoji: "🗣️",
-        pillar: "confidence",
-        kind: "habit",
-        createdAt: Date.now(),
-        done: [],
-        steps: [],
-        unit: null,
-        total: null,
-        progress: 0,
-      },
-    ],
+    // New people pick their own starters in the welcome screen
+    items: [],
     entries: [],
     folders: [
       { id: "f-gratitude", name: "Gratitude", emoji: "🙏" },
       { id: "f-brain", name: "Brain dump", emoji: "🧠" },
     ],
     moods: {},
-    profile: { name: "", avatar: "🌱", textSize: 0 },
+    profile: { name: "", avatar: "🌱", textSize: 0, onboarded: false },
   };
+}
+
+/** Accepts a saved or backed-up state, filling anything missing; returns null if it isn't Aham data */
+export function parseState(data: unknown): State | null {
+  if (!data || typeof data !== "object" || !Array.isArray((data as State).items)) return null;
+  const d = data as Partial<State>;
+  const seed = seedState();
+  // Anyone with saved data has already been welcomed
+  return { ...seed, ...d, profile: { ...seed.profile, onboarded: true, ...d.profile } } as State;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -142,6 +138,7 @@ function migrateLegacy(old: any): State {
     }),
   );
   if (typeof old.textSize === "number") s.profile.textSize = old.textSize as TextSize;
+  s.profile.onboarded = true;
   return s;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -149,7 +146,7 @@ function migrateLegacy(old: any): State {
 function load(): State {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...seedState(), ...JSON.parse(raw) };
+    if (raw) return parseState(JSON.parse(raw)) ?? seedState();
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) return migrateLegacy(JSON.parse(legacy));
   } catch {
@@ -291,6 +288,8 @@ export function useAham() {
 
   const resetAll = useCallback(() => setState(seedState()), []);
 
+  const replaceAll = useCallback((next: State) => setState(next), []);
+
   return {
     state,
     ready,
@@ -310,6 +309,7 @@ export function useAham() {
     deleteFolder,
     setProfile,
     resetAll,
+    replaceAll,
   };
 }
 

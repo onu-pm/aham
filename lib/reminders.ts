@@ -2,15 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { taskDay, type State } from "./store";
+import { isNative, nativePermission, requestNativePermission, setupNativeChrome, syncNativeReminders } from "./native";
 
 export type Permission = NotificationPermission | "unsupported";
 
 /**
- * Fires reminders for timed habits and tasks while Aham is open.
- * Uses a system notification when allowed, and always calls onDue so the app can show it in place.
+ * Reminders for timed habits and tasks.
+ * Android app: scheduled as native notifications, so they arrive even when Aham is closed.
+ * Web: fire while Aham is open, as a system notification when allowed.
+ * Either way, onDue shows the reminder in place while the app is open.
  */
 export function useReminders(state: State, todayKey: string, ready: boolean, onDue: (msg: string) => void) {
   const [permission, setPermission] = useState<Permission>("unsupported");
+  const native = useRef(false);
   const fired = useRef(new Set<string>());
   const onDueRef = useRef(onDue);
   onDueRef.current = onDue;
@@ -18,16 +22,31 @@ export function useReminders(state: State, todayKey: string, ready: boolean, onD
   stateRef.current = state;
 
   useEffect(() => {
+    native.current = isNative();
+    if (native.current) {
+      setupNativeChrome();
+      nativePermission().then(setPermission);
+      return;
+    }
     if (typeof Notification === "undefined") return;
     setPermission(Notification.permission);
     navigator.serviceWorker?.register("/sw.js").catch(() => {});
   }, []);
 
   const enable = useCallback(async () => {
+    if (native.current) return setPermission(await requestNativePermission());
     if (typeof Notification === "undefined") return;
     setPermission(await Notification.requestPermission());
   }, []);
 
+  // Native: keep the scheduled notifications in step with the plan
+  useEffect(() => {
+    if (!ready || !native.current || permission !== "granted") return;
+    const t = setTimeout(() => syncNativeReminders(state.items, todayKey).catch(() => {}), 800);
+    return () => clearTimeout(t);
+  }, [state.items, todayKey, ready, permission]);
+
+  // In-app nudge (and the web notification) while Aham is open
   useEffect(() => {
     if (!ready) return;
     const check = async () => {
@@ -43,16 +62,16 @@ export function useReminders(state: State, todayKey: string, ready: boolean, onD
         if (fired.current.has(key)) continue;
         fired.current.add(key);
 
-        const body = `${i.emoji} ${i.title}`;
         onDueRef.current(`⏰ ${i.title}`);
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-          try {
-            const reg = await navigator.serviceWorker?.getRegistration();
-            if (reg) await reg.showNotification("Aham reminder", { body, tag: key, icon: "/icon.svg" });
-            else new Notification("Aham reminder", { body, tag: key });
-          } catch {
-            // the in-app reminder above still shows
-          }
+        // The native app already got a system notification from its schedule
+        if (native.current || typeof Notification === "undefined" || Notification.permission !== "granted") continue;
+        try {
+          const reg = await navigator.serviceWorker?.getRegistration();
+          const body = `${i.emoji} ${i.title}`;
+          if (reg) await reg.showNotification("Aham reminder", { body, tag: key, icon: "/icon.svg" });
+          else new Notification("Aham reminder", { body, tag: key });
+        } catch {
+          // the in-app reminder above still shows
         }
       }
     };

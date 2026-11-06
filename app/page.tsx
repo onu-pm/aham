@@ -8,6 +8,7 @@ import { Plan } from "@/components/Plan";
 import { Mind } from "@/components/Mind";
 import { Profile } from "@/components/Profile";
 import { QuickAdd } from "@/components/QuickAdd";
+import { Welcome } from "@/components/Welcome";
 import { useAham, type Item } from "@/lib/store";
 import { useReminders } from "@/lib/reminders";
 
@@ -70,6 +71,8 @@ export default function Page() {
       </main>
 
       <BottomNav tab={tab} onChange={go} />
+
+      {store.ready && !store.state.profile.onboarded && <Welcome store={store} />}
 
       <QuickAdd open={adding} onClose={() => setAdding(false)} store={store} defaultKind={null} onAdded={(msg) => showToast({ msg })} />
 

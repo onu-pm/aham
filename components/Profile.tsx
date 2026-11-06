@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Download, RotateCcw } from "lucide-react";
+import { useRef, useState } from "react";
+import { Bell, Download, RotateCcw, Upload } from "lucide-react";
 import { Card, PageTitle, SectionLabel, Segmented, softBtn } from "./ui";
-import { activeDays, showingUpStreak, type Store, type TextSize } from "@/lib/store";
+import { isNative, shareBackup } from "@/lib/native";
+import { activeDays, parseState, showingUpStreak, type Store, type TextSize } from "@/lib/store";
 
 const AVATARS = ["🌱", "🦊", "🐢", "🦉", "🐝", "🌻", "🌙", "⭐", "🐳", "🦋", "🍄", "🐼"];
 
@@ -18,6 +19,20 @@ export function Profile({
 }) {
   const { profile, items, entries } = store.state;
   const [confirmReset, setConfirmReset] = useState(false);
+  const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const restore = async (file: File) => {
+    try {
+      const next = parseState(JSON.parse(await file.text()));
+      if (!next) return setRestoreMsg("That file isn't an Aham backup.");
+      if (!window.confirm("Replace everything on this phone with this backup?")) return;
+      store.replaceAll(next);
+      setRestoreMsg(`Restored ${next.items.length} items and ${next.entries.length} entries.`);
+    } catch {
+      setRestoreMsg("Couldn't read that file.");
+    }
+  };
 
   const checkIns = items.reduce((n, i) => n + i.done.length, 0);
   const tasksDone = items.filter((i) => i.kind === "task" && i.done.length).length;
@@ -31,11 +46,14 @@ export function Profile({
     { emoji: "🏅", name: "Reached a goal", got: items.some((i) => i.kind === "goal" && i.total && i.progress >= i.total) },
   ];
 
-  const exportData = () => {
-    const blob = new Blob([JSON.stringify(store.state, null, 2)], { type: "application/json" });
+  const exportData = async () => {
+    const json = JSON.stringify(store.state, null, 2);
+    const filename = `aham-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    if (isNative()) return shareBackup(json, filename).catch(() => setRestoreMsg("Backup was cancelled."));
+    const blob = new Blob([json], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `aham-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -141,10 +159,24 @@ export function Profile({
       <SectionLabel>Your data</SectionLabel>
       <Card>
         <p className="mb-3 text-[0.9rem] text-muted">Everything stays on this device. Nothing is uploaded.</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button type="button" onClick={exportData} className={softBtn}>
             <Download className="h-4 w-4" /> Back up
           </button>
+          <button type="button" onClick={() => fileRef.current?.click()} className={softBtn}>
+            <Upload className="h-4 w-4" /> Restore
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) restore(f);
+              e.target.value = "";
+            }}
+          />
           <button
             type="button"
             onClick={() => {
@@ -154,9 +186,10 @@ export function Profile({
             }}
             className={`${softBtn} ${confirmReset ? "!bg-rose-600 !text-white" : "!text-rose-600"}`}
           >
-            <RotateCcw className="h-4 w-4" /> {confirmReset ? "Tap to confirm" : "Start fresh"}
+            <RotateCcw className="h-4 w-4" /> {confirmReset ? "Sure?" : "Reset"}
           </button>
         </div>
+        {restoreMsg && <p className="mt-2 text-[0.85rem] font-semibold text-brand-700">{restoreMsg}</p>}
       </Card>
     </div>
   );
