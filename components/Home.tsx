@@ -167,7 +167,7 @@ function WeekSummary({ state }: { state: State }) {
               {mood != null ? MOODS[mood] : ""}
             </span>
             <div className="relative flex h-16 w-full items-end overflow-hidden rounded-xl bg-surface" aria-label={`${d.toLocaleDateString(undefined, { weekday: "long" })}: ${Math.round(pct * 100)}% of habits, ${tasks} tasks`}>
-              <div className="w-full rounded-xl bg-gradient-to-t from-brand-500 to-brand-300 transition-all duration-500" style={{ height: `${pct * 100}%` }} />
+              <div className="w-full rounded-xl grad-bar transition-all duration-500" style={{ height: `${pct * 100}%` }} />
               {tasks > 0 && <span className="absolute inset-x-0 top-1 text-center text-[0.65rem] font-extrabold text-ink">+{tasks}</span>}
             </div>
             <span className={`text-[0.7rem] font-bold ${key === dateKey() ? "text-ink" : "text-muted"}`}>{d.toLocaleDateString(undefined, { weekday: "narrow" })}</span>

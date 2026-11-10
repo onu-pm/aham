@@ -72,6 +72,15 @@ input[type="number"] {
   display: none;
 }
 
+/* Gradients in plain CSS: Tailwind's gradient utilities need a 2023+ WebView,
+   and some Android phones never update theirs */
+.grad-bar {
+  background-image: linear-gradient(to top, var(--color-brand-500), var(--color-brand-300));
+}
+.grad-soft {
+  background-image: linear-gradient(135deg, var(--color-brand-100), var(--color-brand-50) 55%, #fffbeb);
+}
+
 /* Accordion: animates height from 0 to auto */
 .drawer {
   display: grid;

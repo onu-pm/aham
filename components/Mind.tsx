@@ -42,7 +42,7 @@ export function Mind({ store }: { store: Store }) {
       <MoodCard store={store} />
 
       {/* Writing space */}
-      <section className="rounded-3xl bg-gradient-to-br from-brand-100 via-brand-50 to-amber-50 p-4">
+      <section className="rounded-3xl grad-soft p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="font-extrabold text-ink">What&apos;s on your mind?</p>
           <button
@@ -196,7 +196,7 @@ export function MoodCard({ store, compact }: { store: Store; compact?: boolean }
                     {m != null ? MOODS[m] : ""}
                   </span>
                   <div
-                    className={`w-full rounded-full transition-all duration-500 ${m != null ? "bg-gradient-to-t from-brand-300 to-brand-500" : "bg-surface"}`}
+                    className={`w-full rounded-full transition-all duration-500 ${m != null ? "grad-bar" : "bg-surface"}`}
                     style={{ height: m != null ? `${20 + m * 15}%` : "10%" }}
                     aria-label={`${d.toLocaleDateString(undefined, { weekday: "long" })}: ${m != null ? MOOD_LABELS[m] : "no check-in"}`}
                   />

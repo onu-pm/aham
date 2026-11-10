@@ -138,7 +138,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       <div
         role="dialog"
         aria-modal="true"
-        className="animate-sheet pb-nav relative max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white md:rounded-[1.75rem]"
+        className="animate-sheet pb-nav relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white md:rounded-[1.75rem]"
       >
         <div className="sticky top-0 z-10 bg-white px-4 pt-2.5 pb-2">
           <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-zinc-200 md:hidden" />

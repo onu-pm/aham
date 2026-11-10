@@ -49,7 +49,7 @@ Aham supports focus and routines. It is not a medical device and does not replac
 - Phone screenshots: still needed (at least 2; 4–8 recommended). Take them from the app on a phone or emulator: Home, Grow with a drawer open, Plan, Mind.
 
 **Privacy policy URL:** `https://github.com/onu-pm/aham/blob/main/PRIVACY.md`
-(Fill in the support email in PRIVACY.md first.)
+Support email: thepomonu@gmail.com
 
 ## Data safety form (suggested answers)
 

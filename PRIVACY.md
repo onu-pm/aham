@@ -42,4 +42,4 @@ If this policy changes, we will update the date above and the policy in the app'
 
 ## Contact
 
-Questions about privacy: **[your support email]**
+Questions about privacy: **thepomonu@gmail.com**

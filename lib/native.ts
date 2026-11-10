@@ -7,20 +7,22 @@ export const isNative = () => Capacitor.isNativePlatform();
 
 export type NativePermission = "granted" | "denied" | "default";
 
-// Plugins are loaded on demand so the web build never touches them
-const notifications = () => import("@capacitor/local-notifications").then((m) => m.LocalNotifications);
+// Plugins are loaded on demand so the web build never touches them.
+// Hand back the module, not the plugin: a Capacitor plugin proxy answers to `.then`,
+// so resolving a promise with it never settles.
+const notificationsModule = () => import("@capacitor/local-notifications");
 
 function toPermission(state: string): NativePermission {
   return state === "granted" ? "granted" : state === "denied" ? "denied" : "default";
 }
 
 export async function nativePermission(): Promise<NativePermission> {
-  const ln = await notifications();
+  const { LocalNotifications: ln } = await notificationsModule();
   return toPermission((await ln.checkPermissions()).display);
 }
 
 export async function requestNativePermission(): Promise<NativePermission> {
-  const ln = await notifications();
+  const { LocalNotifications: ln } = await notificationsModule();
   return toPermission((await ln.requestPermissions()).display);
 }
 
@@ -44,7 +46,7 @@ const DAYS_AHEAD = 7;
  * Habits skip days already checked off; tasks fire once on their day.
  */
 export async function syncNativeReminders(items: Item[], todayKey: string): Promise<void> {
-  const ln = await notifications();
+  const { LocalNotifications: ln } = await notificationsModule();
   if ((await ln.checkPermissions()).display !== "granted") return;
 
   const pending = await ln.getPending();
