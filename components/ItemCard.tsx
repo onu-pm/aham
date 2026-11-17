@@ -90,7 +90,7 @@ export function GrowItem({
   );
 }
 
-function Details({ item, store, onDeleted }: { item: Item; store: Store; onDeleted: (item: Item) => void }) {
+export function Details({ item, store, onDeleted }: { item: Item; store: Store; onDeleted: (item: Item) => void }) {
   const p = pillarById[item.pillar];
   const [confirm, setConfirm] = useState(false);
 
@@ -164,7 +164,7 @@ function Details({ item, store, onDeleted }: { item: Item; store: Store; onDelet
             onDeleted(item);
           }}
           onBlur={() => setConfirm(false)}
-          className={`flex h-10 shrink-0 items-center gap-1 rounded-full px-3.5 text-[0.9rem] font-bold ${confirm ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-600"}`}
+          className={`flex h-10 shrink-0 items-center gap-1 rounded-full px-3.5 text-[0.9rem] font-bold ${confirm ? "bg-terra-700 text-white" : "bg-terra-50 text-terra-700"}`}
         >
           <Trash2 className="h-4 w-4" /> {confirm ? "Sure?" : "Remove"}
         </button>
@@ -217,7 +217,7 @@ function Months({ item, store }: { item: Item; store: Store }) {
                     aria-label={`${key}: ${on ? "done" : "not done"}`}
                     onClick={() => store.toggleItemDay(item.id, key)}
                     className={`mx-auto flex aspect-square w-full max-w-9 items-center justify-center rounded-full text-[0.8rem] font-bold transition-colors ${
-                      future ? "text-zinc-300" : on ? p.solid : key === today ? "text-ink ring-2 ring-ink" : "bg-surface text-muted"
+                      future ? "text-stone-300" : on ? p.solid : key === today ? "text-ink ring-2 ring-ink" : "bg-surface text-muted"
                     }`}
                   >
                     {i + 1}
@@ -273,7 +273,7 @@ function Progress({ item, store }: { item: Item; store: Store }) {
   );
 }
 
-function Steps({ item, store }: { item: Item; store: Store }) {
+export function Steps({ item, store }: { item: Item; store: Store }) {
   const p = pillarById[item.pillar];
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -292,7 +292,7 @@ function Steps({ item, store }: { item: Item; store: Store }) {
         <div key={s.id} className="flex items-center gap-2">
           <CheckCircle done={done(s.id)} solid={p.solid} label={`${s.text}: ${done(s.id) ? "done" : "mark done"}`} onClick={() => store.toggleStep(item.id, s.id)} />
           <span className={`flex-1 text-[0.95rem] ${done(s.id) ? "text-muted line-through" : "text-ink"}`}>{s.text}</span>
-          <button type="button" aria-label={`Remove ${s.text}`} onClick={() => store.removeStep(item.id, s.id)} className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400">
+          <button type="button" aria-label={`Remove ${s.text}`} onClick={() => store.removeStep(item.id, s.id)} className="flex h-8 w-8 items-center justify-center rounded-full text-stone-400">
             <X className="h-4 w-4" />
           </button>
         </div>

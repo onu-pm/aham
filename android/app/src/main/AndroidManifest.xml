@@ -18,6 +18,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Sign-in links (Google, email confirmation, password reset) come back here -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.onupm.aham" android:host="login-callback" />
+            </intent-filter>
         </activity>
 
         <provider
@@ -32,4 +39,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Speak instead of typing -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 </manifest>

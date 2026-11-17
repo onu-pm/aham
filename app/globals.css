@@ -1,21 +1,69 @@
 @import "tailwindcss";
 
-/* Soft lavender palette. Swap brand-* to retheme. */
+/* Earthy, botanical palette: linen paper, sage and moss greens, clay and ochre accents.
+   brand-* is the main green; the named families colour the pillars. */
 @theme {
-  --color-brand-50: #f6f4ff;
-  --color-brand-100: #ece8fe;
-  --color-brand-200: #dcd4fc;
-  --color-brand-300: #c3b6f8;
-  --color-brand-500: #8f7cf0;
-  --color-brand-600: #7462e0;
-  --color-brand-700: #5947bd;
-  --color-ink: #1d1b26;
-  --color-muted: #6f6b7b;
-  --color-line: #ebe9f0;
-  --color-surface: #f3f1f7;
-  --color-canvas: #faf9fc;
-  --font-sans: var(--font-nunito), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --shadow-soft: 0 1px 2px rgb(29 27 38 / 0.04), 0 8px 24px -12px rgb(60 40 140 / 0.12);
+  --color-brand-50: #f2f5ee;
+  --color-brand-100: #e4ebdc;
+  --color-brand-200: #cbd8bd;
+  --color-brand-300: #aec29a;
+  --color-brand-500: #6f8f5e;
+  --color-brand-600: #587a4a;
+  --color-brand-700: #425e37;
+  --color-ink: #1f2a22;
+  --color-forest: #1e2a22;
+  --color-muted: #6f6a5f;
+  --color-line: #e8e1d5;
+  --color-surface: #f1ece3;
+  --color-canvas: #f8f5ef;
+
+  --color-sage-50: #f2f5ef;
+  --color-sage-100: #e2eadc;
+  --color-sage-400: #8fa982;
+  --color-sage-700: #4b6440;
+  --color-moss-50: #eff3e9;
+  --color-moss-100: #dbe6cf;
+  --color-moss-400: #6f8f4e;
+  --color-moss-700: #3f5a2b;
+  --color-olive-50: #f4f3e6;
+  --color-olive-100: #e8e5c8;
+  --color-olive-400: #a39b55;
+  --color-olive-700: #6a6330;
+  --color-ochre-50: #fbf4e4;
+  --color-ochre-100: #f5e5bf;
+  --color-ochre-400: #d2a548;
+  --color-ochre-700: #8a6420;
+  --color-clay-50: #fbf1ea;
+  --color-clay-100: #f3dccd;
+  --color-clay-400: #cf9070;
+  --color-clay-700: #8c4f33;
+  --color-terra-50: #fbefe9;
+  --color-terra-100: #f2d6c8;
+  --color-terra-400: #c26d4c;
+  --color-terra-700: #883f27;
+  --color-rosewood-50: #f8eeee;
+  --color-rosewood-100: #eed6d5;
+  --color-rosewood-400: #b97a78;
+  --color-rosewood-700: #7d4543;
+  --color-plum-50: #f4eff4;
+  --color-plum-100: #e5d9e5;
+  --color-plum-400: #957894;
+  --color-plum-700: #5e445e;
+  --color-slate-50: #eff3f4;
+  --color-slate-100: #dbe4e6;
+  --color-slate-400: #7c979c;
+  --color-slate-700: #46606a;
+  --color-sand-50: #f8f4ec;
+  --color-sand-100: #ede3d1;
+  --color-sand-400: #bba47c;
+  --color-sand-700: #76643f;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: var(--font-geist), var(--font-inter), system-ui, sans-serif;
+  /* Softer weights everywhere: calm, not shouty */
+  --font-weight-bold: 550;
+  --font-weight-extrabold: 620;
+  --shadow-soft: 0 1px 2px rgb(31 42 34 / 0.04), 0 10px 28px -14px rgb(64 52 30 / 0.16);
 }
 
 :root {
@@ -33,12 +81,18 @@ body {
 
 body {
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: 400;
+  letter-spacing: -0.005em;
   line-height: 1.5;
 }
 
 /* iOS zooms on inputs under 16px */
 @layer base {
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
   input,
   textarea {
     font-size: max(16px, 1rem);
@@ -75,10 +129,55 @@ input[type="number"] {
 /* Gradients in plain CSS: Tailwind's gradient utilities need a 2023+ WebView,
    and some Android phones never update theirs */
 .grad-bar {
-  background-image: linear-gradient(to top, var(--color-brand-500), var(--color-brand-300));
+  background-image: linear-gradient(to top, var(--color-brand-600), var(--color-brand-300));
 }
 .grad-soft {
-  background-image: linear-gradient(135deg, var(--color-brand-100), var(--color-brand-50) 55%, #fffbeb);
+  background-image: linear-gradient(135deg, var(--color-brand-100), var(--color-sand-50) 55%, var(--color-clay-50));
+}
+/* The page wash: a little morning light at the top */
+.bg-page {
+  background-color: var(--color-canvas);
+  background-image: radial-gradient(120% 60% at 15% 0%, var(--color-brand-100) 0%, transparent 60%),
+    radial-gradient(90% 45% at 100% 0%, var(--color-clay-50) 0%, transparent 55%);
+  background-repeat: no-repeat;
+}
+
+/* Botanical: leaves sway gently on the opening banner and loaders */
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+.animate-sway {
+  animation: sway 4s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+.animate-breathe {
+  animation: breathe 3.2s ease-in-out infinite;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.animate-rise {
+  animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* Accordion: animates height from 0 to auto */

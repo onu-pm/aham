@@ -18,5 +18,8 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Android 12+ start-up screen: deep forest, like the opening banner -->
+        <item name="windowSplashScreenBackground">#1E2A22</item>
+        <item name="android:windowBackground">@drawable/splash</item>
     </style>
 </resources>

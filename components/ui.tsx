@@ -20,7 +20,7 @@ export function PageTitle({ title, subtitle, action, back }: { title: string; su
     <header className="flex items-end justify-between gap-3 px-1 pt-5 pb-1">
       <div className="min-w-0">
         {back}
-        <h1 className="text-[1.75rem] leading-tight font-extrabold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-[2rem] leading-tight font-medium tracking-tight text-ink">{title}</h1>
         {subtitle && <p className="mt-0.5 text-muted">{subtitle}</p>}
       </div>
       {action}
@@ -141,7 +141,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         className="animate-sheet pb-nav relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white md:rounded-[1.75rem]"
       >
         <div className="sticky top-0 z-10 bg-white px-4 pt-2.5 pb-2">
-          <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-zinc-200 md:hidden" />
+          <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-stone-200 md:hidden" />
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 text-[1.25rem] font-extrabold text-ink">{title}</div>
             <button type="button" onClick={onClose} aria-label="Close" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
@@ -163,7 +163,7 @@ export function CheckCircle({ done, solid, onClick, label }: { done: boolean; so
       aria-label={label}
       onClick={onClick}
       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
-        done ? `${solid} animate-pop` : "border-2 border-zinc-300 bg-white"
+        done ? `${solid} animate-pop` : "border-2 border-stone-300 bg-white"
       }`}
     >
       {done && (
@@ -176,7 +176,7 @@ export function CheckCircle({ done, solid, onClick, label }: { done: boolean; so
 }
 
 export const inputCls =
-  "h-12 w-full rounded-2xl bg-surface px-4 text-ink outline-none placeholder:text-zinc-400 focus:bg-white focus:ring-2 focus:ring-brand-300";
+  "h-12 w-full rounded-2xl bg-surface px-4 text-ink outline-none placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-brand-300";
 
 export const primaryBtn =
   "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-25";

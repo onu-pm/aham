@@ -26,7 +26,16 @@ export type Item = {
   remind?: boolean;
   /** Habits: which micro-steps were done on each day, since they reset daily */
   stepLog?: Record<string, string[]>;
+  /** Planner: "HH:MM" end time, so a task shows as a block on the calendar */
+  end?: string | null;
+  /** Habits: how many times a day counts as "met" (default 1), and the tally per day */
+  target?: number;
+  counts?: Record<string, number>;
 };
+
+export type ListItem = { id: string; text: string; done: boolean };
+/** A to-do list stamped with the day it belongs to */
+export type TodoList = { id: string; title: string; date: string; createdAt: number; items: ListItem[] };
 
 /** Whether a step is done; habit steps are tracked per day */
 export function stepDone(item: Item, stepId: string, key: string): boolean {
@@ -53,6 +62,7 @@ export type Profile = { name: string; avatar: string; textSize: TextSize; onboar
 
 export type State = {
   items: Item[];
+  lists: TodoList[];
   entries: Entry[];
   folders: Folder[];
   /** Mood check-in per day, 0-4 */
@@ -85,6 +95,7 @@ function seedState(): State {
   return {
     // New people pick their own starters in the welcome screen
     items: [],
+    lists: [],
     entries: [],
     folders: [
       { id: "f-gratitude", name: "Gratitude", emoji: "🙏" },
@@ -101,7 +112,7 @@ export function parseState(data: unknown): State | null {
   const d = data as Partial<State>;
   const seed = seedState();
   // Anyone with saved data has already been welcomed
-  return { ...seed, ...d, profile: { ...seed.profile, onboarded: true, ...d.profile } } as State;
+  return { ...seed, ...d, lists: Array.isArray(d.lists) ? d.lists : [], profile: { ...seed.profile, onboarded: true, ...d.profile } } as State;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -155,7 +166,8 @@ function load(): State {
   return seedState();
 }
 
-export type NewItem = Pick<Item, "title" | "emoji" | "pillar" | "kind"> & Partial<Pick<Item, "steps" | "unit" | "total" | "date" | "time" | "remind">>;
+export type NewItem = Pick<Item, "title" | "emoji" | "pillar" | "kind"> &
+  Partial<Pick<Item, "steps" | "unit" | "total" | "date" | "time" | "end" | "remind" | "target">>;
 export type NewEntry = Pick<Entry, "title" | "body" | "mood" | "pillar" | "folderId">;
 
 export function useAham() {
@@ -210,7 +222,9 @@ export function useAham() {
     (id: string, key: string = todayKey) =>
       mapItem(id, (i) => {
         if (i.kind === "task") return { ...i, done: i.done.length ? [] : [key] };
-        return { ...i, done: i.done.includes(key) ? i.done.filter((k) => k !== key) : [...i.done, key] };
+        const on = i.done.includes(key);
+        const counts = i.kind === "habit" && (i.target ?? 1) > 1 ? { ...i.counts, [key]: on ? 0 : (i.target ?? 1) } : i.counts;
+        return { ...i, counts, done: on ? i.done.filter((k) => k !== key) : [...i.done, key] };
       }),
     [todayKey],
   );
@@ -235,6 +249,68 @@ export function useAham() {
       }),
     [todayKey],
   );
+
+  /** Habits with a daily target: add or take away one, and mark the day met once the target is reached */
+  const bumpHabit = useCallback(
+    (id: string, delta: number, key: string = todayKey) =>
+      mapItem(id, (i) => {
+        const target = i.target ?? 1;
+        const n = Math.max(0, Math.min(target * 3, (i.counts?.[key] ?? 0) + delta));
+        const met = n >= target;
+        const done = met ? [...new Set([...i.done, key])] : i.done.filter((k) => k !== key);
+        return { ...i, counts: { ...i.counts, [key]: n }, done };
+      }),
+    [todayKey],
+  );
+
+  /* ---------- to-do lists ---------- */
+
+  const mapList = (id: string, fn: (l: TodoList) => TodoList) =>
+    setState((s) => ({ ...s, lists: s.lists.map((l) => (l.id === id ? fn(l) : l)) }));
+
+  const addList = useCallback((title: string, date: string, texts: string[] = []) => {
+    const list: TodoList = { id: uid(), title, date, createdAt: Date.now(), items: texts.map((text) => ({ id: uid(), text, done: false })) };
+    setState((s) => ({ ...s, lists: [list, ...s.lists] }));
+    return list.id;
+  }, []);
+
+  const updateList = useCallback((id: string, patch: Partial<Pick<TodoList, "title" | "date">>) => mapList(id, (l) => ({ ...l, ...patch })), []);
+
+  const deleteList = useCallback((id: string) => setState((s) => ({ ...s, lists: s.lists.filter((l) => l.id !== id) })), []);
+
+  const restoreList = useCallback((list: TodoList) => setState((s) => ({ ...s, lists: [list, ...s.lists.filter((l) => l.id !== list.id)] })), []);
+
+  const addListItem = useCallback(
+    (id: string, text: string) => mapList(id, (l) => ({ ...l, items: [...l.items, { id: uid(), text, done: false }] })),
+    [],
+  );
+
+  const toggleListItem = useCallback(
+    (id: string, itemId: string) => mapList(id, (l) => ({ ...l, items: l.items.map((x) => (x.id === itemId ? { ...x, done: !x.done } : x)) })),
+    [],
+  );
+
+  const editListItem = useCallback(
+    (id: string, itemId: string, text: string) => mapList(id, (l) => ({ ...l, items: l.items.map((x) => (x.id === itemId ? { ...x, text } : x)) })),
+    [],
+  );
+
+  const removeListItem = useCallback((id: string, itemId: string) => mapList(id, (l) => ({ ...l, items: l.items.filter((x) => x.id !== itemId) })), []);
+
+  /** Carries a list's unchecked items onto a list for another day */
+  const carryOver = useCallback((fromId: string, toDate: string) => {
+    setState((s) => {
+      const from = s.lists.find((l) => l.id === fromId);
+      if (!from) return s;
+      const left = from.items.filter((x) => !x.done);
+      if (!left.length) return s;
+      const rest = s.lists.map((l) => (l.id === fromId ? { ...l, items: l.items.filter((x) => x.done) } : l));
+      const target = rest.find((l) => l.date === toDate && l.title === from.title);
+      const moved = left.map((x) => ({ ...x, id: uid() }));
+      if (target) return { ...s, lists: rest.map((l) => (l.id === target.id ? { ...l, items: [...l.items, ...moved] } : l)) };
+      return { ...s, lists: [{ id: uid(), title: from.title, date: toDate, createdAt: Date.now(), items: moved }, ...rest] };
+    });
+  }, []);
 
   const setSteps = useCallback((id: string, texts: string[]) => {
     mapItem(id, (i) => ({ ...i, steps: [...i.steps, ...texts.map((text) => ({ id: uid(), text, done: false }))] }));
@@ -300,6 +376,16 @@ export function useAham() {
     restoreItem,
     toggleItemDay,
     toggleStep,
+    bumpHabit,
+    addList,
+    updateList,
+    deleteList,
+    restoreList,
+    addListItem,
+    toggleListItem,
+    editListItem,
+    removeListItem,
+    carryOver,
     setSteps,
     removeStep,
     setMood,
@@ -357,8 +443,14 @@ export function itemThisWeek(item: Item): number {
   return n;
 }
 
+/** Habit tally for a day; a habit without a target counts 1 when checked */
+export function habitCount(item: Item, key: string): number {
+  return item.counts?.[key] ?? (item.done.includes(key) ? (item.target ?? 1) : 0);
+}
+
 export function activeDays(state: State): number {
   const keys = new Set<string>(Object.keys(state.moods));
+  state.lists.forEach((l) => l.items.some((x) => x.done) && keys.add(l.date));
   state.items.forEach((i) => i.done.forEach((k) => keys.add(k)));
   state.entries.forEach((e) => keys.add(dateKey(new Date(e.createdAt))));
   return keys.size;
@@ -366,6 +458,7 @@ export function activeDays(state: State): number {
 
 export function showingUpStreak(state: State): number {
   const keys = new Set<string>(Object.keys(state.moods));
+  state.lists.forEach((l) => l.items.some((x) => x.done) && keys.add(l.date));
   state.items.forEach((i) => i.done.forEach((k) => keys.add(k)));
   state.entries.forEach((e) => keys.add(dateKey(new Date(e.createdAt))));
   return streak((k) => keys.has(k));

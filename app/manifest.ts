@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Gentle habit building and self-growth for neurodivergent minds.",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf9fc",
-    theme_color: "#ece8fe",
+    background_color: "#f8f5ef",
+    theme_color: "#1e2a22",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
   };
 }

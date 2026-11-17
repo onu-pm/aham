@@ -6,12 +6,12 @@ const config: CapacitorConfig = {
   appName: "Aham",
   webDir: "out",
   android: {
-    backgroundColor: "#faf9fc",
+    backgroundColor: "#1e2a22",
   },
   plugins: {
     LocalNotifications: {
       smallIcon: "ic_stat_aham",
-      iconColor: "#8f7cf0",
+      iconColor: "#6f8f5e",
     },
   },
 };

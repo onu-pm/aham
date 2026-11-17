@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Bell, Download, RotateCcw, Upload } from "lucide-react";
+import { Bell, Cloud, CloudOff, Download, LogOut, RotateCcw, Trash2, Upload } from "lucide-react";
 import { Card, PageTitle, SectionLabel, Segmented, softBtn } from "./ui";
 import { isNative, shareBackup } from "@/lib/native";
 import { activeDays, parseState, showingUpStreak, type Store, type TextSize } from "@/lib/store";
+import { authMessage, type Auth } from "@/lib/auth";
+import { forgetLocalAccount, type SyncStatus } from "@/lib/sync";
 
 const AVATARS = ["🌱", "🦊", "🐢", "🦉", "🐝", "🌻", "🌙", "⭐", "🐳", "🦋", "🍄", "🐼"];
 
@@ -12,12 +14,17 @@ export function Profile({
   store,
   notify,
   onEnableNotify,
+  auth,
+  syncStatus,
 }: {
   store: Store;
   notify: NotificationPermission | "unsupported";
   onEnableNotify: () => void;
+  auth: Auth;
+  syncStatus: SyncStatus;
 }) {
-  const { profile, items, entries } = store.state;
+  const session = auth.state.status === "signedIn" ? auth.state.session : null;
+  const { profile, items, lists } = store.state;
   const [confirmReset, setConfirmReset] = useState(false);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -28,7 +35,7 @@ export function Profile({
       if (!next) return setRestoreMsg("That file isn't an Aham backup.");
       if (!window.confirm("Replace everything on this phone with this backup?")) return;
       store.replaceAll(next);
-      setRestoreMsg(`Restored ${next.items.length} items and ${next.entries.length} entries.`);
+      setRestoreMsg(`Restored ${next.items.length} habits and plans and ${next.lists.length} lists.`);
     } catch {
       setRestoreMsg("Couldn't read that file.");
     }
@@ -39,7 +46,7 @@ export function Profile({
 
   const badges = [
     { emoji: "🌱", name: "First check-in", got: checkIns > 0 },
-    { emoji: "💭", name: "First Mind entry", got: entries.length > 0 },
+    { emoji: "📝", name: "First list done", got: lists.some((l) => l.items.length > 0 && l.items.every((x) => x.done)) },
     { emoji: "🧩", name: "Finished micro-tasks", got: items.some((i) => i.kind === "task" && i.steps.length > 0 && i.done.length > 0) },
     { emoji: "🔥", name: "Showed up 7 days", got: showingUpStreak(store.state) >= 7 },
     { emoji: "🌈", name: "Grew in 3 pillars", got: new Set(items.filter((i) => i.done.length).map((i) => i.pillar)).size >= 3 },
@@ -73,7 +80,7 @@ export function Profile({
               value={profile.name}
               onChange={(e) => store.setProfile({ name: e.target.value })}
               placeholder="What should we call you?"
-              className="w-full bg-transparent text-xl font-extrabold text-ink outline-none placeholder:text-zinc-300"
+              className="w-full bg-transparent text-xl font-extrabold text-ink outline-none placeholder:text-stone-300"
             />
           </label>
         </div>
@@ -100,7 +107,7 @@ export function Profile({
             { label: "Days", value: activeDays(store.state) },
             { label: "Check-ins", value: checkIns },
             { label: "Tasks", value: tasksDone },
-            { label: "Entries", value: entries.length },
+            { label: "Checked", value: lists.reduce((n, l) => n + l.items.filter((x) => x.done).length, 0) },
           ].map((s) => (
             <div key={s.label} className="rounded-2xl bg-surface py-2">
               <p className="text-lg font-extrabold text-ink tabular-nums">{s.value}</p>
@@ -110,7 +117,7 @@ export function Profile({
         </div>
         <ul className="mt-3 grid grid-cols-3 gap-2">
           {badges.map((b) => (
-            <li key={b.name} className={`rounded-2xl p-2.5 text-center ${b.got ? "bg-amber-50" : "bg-surface"}`}>
+            <li key={b.name} className={`rounded-2xl p-2.5 text-center ${b.got ? "bg-ochre-50" : "bg-surface"}`}>
               <span className={`text-2xl ${b.got ? "" : "opacity-30 grayscale"}`} aria-hidden>
                 {b.emoji}
               </span>
@@ -156,9 +163,11 @@ export function Profile({
         </div>
       </Card>
 
+      {session && <Account email={session.user.email ?? ""} status={syncStatus} auth={auth} store={store} />}
+
       <SectionLabel>Your data</SectionLabel>
       <Card>
-        <p className="mb-3 text-[0.9rem] text-muted">Everything stays on this device. Nothing is uploaded.</p>
+        <p className="mb-3 text-[0.9rem] text-muted">{session ? "Saved to your account and on this phone. You can also keep a backup file." : "Everything stays on this device. Nothing is uploaded."}</p>
         <div className="grid grid-cols-3 gap-2">
           <button type="button" onClick={exportData} className={softBtn}>
             <Download className="h-4 w-4" /> Back up
@@ -184,7 +193,7 @@ export function Profile({
               store.resetAll();
               setConfirmReset(false);
             }}
-            className={`${softBtn} ${confirmReset ? "!bg-rose-600 !text-white" : "!text-rose-600"}`}
+            className={`${softBtn} ${confirmReset ? "!bg-terra-700 !text-white" : "!text-terra-700"}`}
           >
             <RotateCcw className="h-4 w-4" /> {confirmReset ? "Sure?" : "Reset"}
           </button>
@@ -192,5 +201,62 @@ export function Profile({
         {restoreMsg && <p className="mt-2 text-[0.85rem] font-semibold text-brand-700">{restoreMsg}</p>}
       </Card>
     </div>
+  );
+}
+
+function Account({ email, status, auth, store }: { email: string; status: SyncStatus; auth: Auth; store: Store }) {
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <>
+      <SectionLabel>Account</SectionLabel>
+      <Card className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${status === "offline" ? "bg-ochre-50 text-ochre-700" : "bg-moss-50 text-moss-700"}`}>
+            {status === "offline" ? <CloudOff className="h-5 w-5" /> : <Cloud className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-bold text-ink">{email}</p>
+            <p className="text-[0.85rem] text-muted">{status === "syncing" ? "Saving…" : status === "offline" ? "Offline. Changes will save when you're back online." : "All changes saved to your account"}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              await auth.signOut();
+              forgetLocalAccount(store);
+            }}
+            className={softBtn}
+          >
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+          <button type="button" onClick={() => setStep(step === 0 ? 1 : 0)} className={`${softBtn} !text-terra-700`}>
+            <Trash2 className="h-4 w-4" /> Delete account
+          </button>
+        </div>
+        {step > 0 && (
+          <div className="space-y-2 rounded-2xl bg-terra-50 p-3">
+            <p className="text-[0.9rem] font-semibold text-terra-700">This permanently deletes your account and everything in it: habits, plans and lists. It can&apos;t be undone.</p>
+            <button
+              type="button"
+              onClick={async () => {
+                if (step === 1) return setStep(2);
+                try {
+                  await auth.deleteAccount();
+                  forgetLocalAccount(store);
+                } catch (e) {
+                  setError(authMessage(e));
+                }
+              }}
+              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-terra-700 font-bold text-white"
+            >
+              {step === 1 ? "Delete my account" : "Yes, delete everything"}
+            </button>
+            {error && <p className="text-[0.85rem] font-semibold text-terra-700">{error}</p>}
+          </div>
+        )}
+      </Card>
+    </>
   );
 }

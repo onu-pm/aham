@@ -1,14 +1,14 @@
 "use client";
 
-import { House, Sprout, Brain, CalendarDays, CircleUserRound } from "lucide-react";
+import { House, Sprout, ListChecks, CalendarDays, CircleUserRound } from "lucide-react";
 
-export type Tab = "plan" | "grow" | "home" | "mind" | "me";
+export type Tab = "plan" | "grow" | "home" | "lists" | "me";
 
 const tabs: { id: Tab; label: string; icon: typeof House }[] = [
   { id: "plan", label: "Plan", icon: CalendarDays },
-  { id: "grow", label: "Grow", icon: Sprout },
+  { id: "grow", label: "Habits", icon: Sprout },
   { id: "home", label: "Home", icon: House },
-  { id: "mind", label: "Mind", icon: Brain },
+  { id: "lists", label: "Lists", icon: ListChecks },
   { id: "me", label: "Me", icon: CircleUserRound },
 ];
 
