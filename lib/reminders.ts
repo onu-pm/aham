@@ -42,9 +42,9 @@ export function useReminders(state: State, todayKey: string, ready: boolean, onD
   // Native: keep the scheduled notifications in step with the plan
   useEffect(() => {
     if (!ready || !native.current || permission !== "granted") return;
-    const t = setTimeout(() => syncNativeReminders(state.items, todayKey).catch(() => {}), 800);
+    const t = setTimeout(() => syncNativeReminders(state.items, todayKey, state.lists).catch(() => {}), 800);
     return () => clearTimeout(t);
-  }, [state.items, todayKey, ready, permission]);
+  }, [state.items, state.lists, todayKey, ready, permission]);
 
   // In-app nudge (and the web notification) while Aham is open
   useEffect(() => {
@@ -52,9 +52,13 @@ export function useReminders(state: State, todayKey: string, ready: boolean, onD
     const check = async () => {
       const now = new Date();
       const hm = now.toTimeString().slice(0, 5);
-      for (const i of stateRef.current.items) {
+      // Timed tasks on today's lists count as reminders too
+      const taskReminders = stateRef.current.lists
+        .filter((l) => l.date === todayKey)
+        .flatMap((l) => l.items.filter((x) => x.time && !x.done).map((x) => ({ id: x.id, title: x.text, emoji: l.emoji ?? "✅", time: x.time!, remind: true, kind: "list" as const, done: [] as string[] })));
+      for (const i of [...stateRef.current.items, ...taskReminders]) {
         if (!i.remind || !i.time || i.time > hm || i.done.includes(todayKey)) continue;
-        if (i.kind === "task" && taskDay(i, todayKey) !== todayKey) continue;
+        if (i.kind === "task" && taskDay(i as Parameters<typeof taskDay>[0], todayKey) !== todayKey) continue;
         // Only nudge within 30 minutes of the time, once per day
         const [h, m] = i.time.split(":").map(Number);
         if (now.getHours() * 60 + now.getMinutes() - (h * 60 + m) > 30) continue;

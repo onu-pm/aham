@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Inter } from "next/font/google";
+import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-// Calm, modern type: Inter for reading, Geist for headings
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+// Modern, warm type: Plus Jakarta Sans for reading, Bricolage Grotesque for headings
+const body = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-body" });
+const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display-face", axes: ["opsz", "wdth"] });
 
 export const metadata: Metadata = {
   title: "Aham",
@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${geist.variable}`}>
+    <html lang="en" className={`${body.variable} ${display.variable}`}>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
   );

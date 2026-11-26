@@ -66,7 +66,7 @@ export function Profile({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="stagger space-y-3">
       <PageTitle title="Me" />
 
       <Card>

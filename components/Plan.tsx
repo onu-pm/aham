@@ -6,8 +6,9 @@ import { CheckCircle, Segmented, Sheet, inputCls, primaryBtn } from "./ui";
 import { AddBar, MicButton } from "./AddBar";
 import { Steps, fmtTime } from "./ItemCard";
 import { Figure } from "./Figures";
-import { detect, pillarById, tidyTitle } from "@/lib/pillars";
+import { detect, pillarById, tidyTitle, type PillarId } from "@/lib/pillars";
 import { addMinutes, parseWhen } from "@/lib/when";
+import { celebrate } from "@/lib/fx";
 import { byTime, dateKey, taskDay, type Item, type Store } from "@/lib/store";
 
 type View = "day" | "week" | "month";
@@ -27,7 +28,42 @@ const mins = (hm: string) => {
 const endOf = (i: Item) => (i.end && i.time && i.end > i.time ? i.end : addMinutes(i.time ?? "09:00", 60));
 
 /** What the editor sheet is showing: an existing task, or a new one at a day and time */
-type Editing = { id: string } | { date: string; time: string | null };
+type Editing = { id: string } | { date: string; time: string | null; title?: string; pillar?: PillarId; minutes?: number };
+
+/** Kinds of time block, each with its own colour (they reuse the pillar palette) */
+const BLOCK_TYPES: { pillar: PillarId; label: string; emoji: string }[] = [
+  { pillar: "focus", label: "Focus", emoji: "🎯" },
+  { pillar: "create", label: "Work", emoji: "💼" },
+  { pillar: "body", label: "Move", emoji: "🏃" },
+  { pillar: "selfcare", label: "Meal", emoji: "🍽️" },
+  { pillar: "mind", label: "Rest", emoji: "🧘" },
+  { pillar: "people", label: "People", emoji: "👥" },
+  { pillar: "learn", label: "Learn", emoji: "📚" },
+  { pillar: "home", label: "Chores", emoji: "🏠" },
+  { pillar: "money", label: "Money", emoji: "💸" },
+];
+
+/** One-tap blocks for the most common parts of a day */
+const TEMPLATES: { title: string; pillar: PillarId; minutes: number; emoji: string }[] = [
+  { title: "Deep work", pillar: "focus", minutes: 90, emoji: "🎯" },
+  { title: "Workout", pillar: "body", minutes: 45, emoji: "🏃" },
+  { title: "Lunch", pillar: "selfcare", minutes: 60, emoji: "🍽️" },
+  { title: "Break", pillar: "mind", minutes: 15, emoji: "🧘" },
+  { title: "Meeting", pillar: "create", minutes: 30, emoji: "💼" },
+  { title: "Call", pillar: "people", minutes: 30, emoji: "📞" },
+  { title: "Study", pillar: "learn", minutes: 60, emoji: "📚" },
+  { title: "Chores", pillar: "home", minutes: 30, emoji: "🧺" },
+];
+
+/** The next free half-hour on a day, from now (today) or 9am */
+function nextFree(items: Item[], day: string, today: string, minutes: number): string {
+  const timed = items.filter((i) => i.time).map((i) => [mins(i.time!), mins(endOf(i))]);
+  const now = new Date();
+  let t = day === today ? Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30 : 9 * 60;
+  for (; t + minutes <= 23 * 60; t += 30) if (!timed.some(([s, e]) => t < e && t + minutes > s)) break;
+  t = Math.min(t, 22 * 60);
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
 
 export function Plan({
   store,
@@ -45,7 +81,7 @@ export function Plan({
   onEnableNotify: () => void;
 }) {
   const today = store.todayKey;
-  const [view, setView] = useState<View>("week");
+  const [view, setView] = useState<View>("day");
   const [day, setDay] = useState(today);
   const [editing, setEditing] = useState<Editing | null>(null);
   const tasks = store.state.items.filter((i) => i.kind === "task");
@@ -99,7 +135,7 @@ export function Plan({
   const hasTimed = tasks.some((i) => i.time && !i.done.length);
 
   return (
-    <div className="space-y-3">
+    <div className="stagger space-y-3">
       <header className="flex items-center justify-between gap-2 px-1 pt-5">
         <div className="min-w-0">
           <p className="text-[0.9rem] font-semibold text-muted">Planner</p>
@@ -130,7 +166,58 @@ export function Plan({
         ]}
       />
 
-      <AddBar placeholder="Add… e.g. “call mum tomorrow at 5pm”" onAdd={quickAdd} />
+      <AddBar placeholder="Add… e.g. “gym tomorrow 7am for 1 hour”" onAdd={quickAdd} />
+
+      {view === "day" && (
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 7 }, (_, i) => shiftDays(mondayOf(day), i)).map((k) => {
+            const n = on(k).length;
+            const sel = k === day;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setDay(k)}
+                aria-pressed={sel}
+                aria-label={`${toDate(k).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}, ${n} planned`}
+                className={`flex h-14 flex-col items-center justify-center rounded-2xl ${sel ? "bg-ink text-white" : k === today ? "bg-brand-100 text-ink" : "bg-white text-ink shadow-soft"}`}
+              >
+                <span className={`text-[0.62rem] font-bold uppercase ${sel ? "text-white/70" : "text-muted"}`}>{toDate(k).toLocaleDateString(undefined, { weekday: "short" })}</span>
+                <span className="text-[0.95rem] leading-tight font-extrabold">{toDate(k).getDate()}</span>
+                <span className="mt-0.5 flex h-1.5 gap-0.5">
+                  {Array.from({ length: Math.min(3, n) }, (_, j) => (
+                    <span key={j} className={`h-1.5 w-1.5 rounded-full ${sel ? "bg-brand-300" : "bg-brand-500"}`} />
+                  ))}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {view !== "month" && (
+        <section>
+          <p className="px-1 text-[0.8rem] font-bold tracking-wider text-muted uppercase">Add a block</p>
+          <div className="no-scrollbar -mx-4 mt-1.5 flex gap-2 overflow-x-auto px-4 pb-1">
+            {TEMPLATES.map((t) => {
+              const p = pillarById[t.pillar];
+              return (
+                <button
+                  key={t.title}
+                  type="button"
+                  onClick={() => setEditing({ date: day, time: nextFree(on(day), day, today, t.minutes), title: t.title, pillar: t.pillar, minutes: t.minutes })}
+                  className={`flex h-10 shrink-0 items-center gap-1.5 rounded-full pr-3.5 pl-2.5 text-[0.85rem] font-bold whitespace-nowrap text-ink ${p.soft} active:scale-95`}
+                >
+                  <span aria-hidden>{t.emoji}</span> {t.title}
+                  <span className="text-[0.72rem] font-semibold text-muted">{t.minutes < 60 ? `${t.minutes}m` : `${t.minutes / 60}h`}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {view === "day" && <DaySummary items={on(day)} />}
 
       {notify !== "granted" && notify !== "unsupported" && hasTimed && (
         <button type="button" onClick={onEnableNotify} className="flex w-full items-center gap-3 rounded-3xl bg-ochre-50 p-3 text-left">
@@ -326,6 +413,22 @@ function DayColumn({
         onSlot(dayKey, `${String(Math.floor(half / 2)).padStart(2, "0")}:${half % 2 ? "30" : "00"}`);
       }}
     >
+      {!compact && <DayParts />}
+      {!compact &&
+        Array.from({ length: 17 }, (_, n) => n + 6)
+          .filter((h) => !lanes.some(({ i }) => mins(i.time!) < (h + 1) * 60 && mins(endOf(i)) > h * 60))
+          .map((h) => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => onSlot(dayKey, `${String(h).padStart(2, "0")}:00`)}
+              aria-label={`Add a block at ${h % 12 || 12}${h < 12 ? "am" : "pm"}`}
+              className="group absolute right-1 left-1 flex items-center justify-center rounded-xl border border-dashed border-transparent text-brand-200 transition-colors hover:border-brand-200 hover:text-brand-600 active:border-brand-300 active:bg-brand-50 active:text-brand-700"
+              style={{ top: h * HOUR_PX + 4, height: HOUR_PX - 8 }}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          ))}
       {lanes.map(({ i, lane }) => {
         const p = pillarById[i.pillar];
         const top = (mins(i.time!) / 60) * HOUR_PX;
@@ -334,9 +437,10 @@ function DayColumn({
         return (
           <div
             key={i.id}
-            className={`absolute overflow-hidden rounded-lg ${done ? "bg-surface opacity-70" : p.soft} ${compact ? "px-0.5 py-px" : "flex gap-1.5 px-2 py-1"}`}
+            className={`absolute z-[1] overflow-hidden rounded-xl ${done ? "bg-surface opacity-70" : p.soft} ${compact ? "py-px pr-0.5 pl-1.5" : "flex gap-1.5 py-1 pr-2 pl-3 shadow-sm"}`}
             style={{ top: top + 1, height, left: `calc(${(lane / width) * 100}% + 2px)`, width: `calc(${100 / width}% - 4px)` }}
           >
+            <span aria-hidden className={`absolute inset-y-0 left-0 ${compact ? "w-1" : "w-1.5"} ${p.bar}`} />
             <button type="button" onClick={() => onOpen(i)} className="min-w-0 flex-1 text-left">
               <span className={`block truncate leading-tight font-bold text-ink ${compact ? "text-[0.6rem]" : "text-[0.85rem]"} ${done ? "line-through" : ""}`}>
                 {compact ? i.title : `${i.emoji} ${i.title}`}
@@ -350,7 +454,10 @@ function DayColumn({
             {!compact && (
               <button
                 type="button"
-                onClick={() => store.toggleItemDay(i.id)}
+                onClick={(e) => {
+                  if (!done) celebrate(e.currentTarget);
+                  store.toggleItemDay(i.id);
+                }}
                 aria-label={`${i.title}: ${done ? "done" : "mark done"}`}
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${done ? p.solid : "border-2 border-ink/25 bg-white/70"}`}
               >
@@ -364,6 +471,47 @@ function DayColumn({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Soft bands for the parts of the day, so the grid reads at a glance */
+function DayParts() {
+  const parts = [
+    { from: 6, to: 12, label: "☀️ Morning", cls: "bg-ochre-50/60" },
+    { from: 12, to: 17, label: "🌤️ Afternoon", cls: "bg-sand-50/70" },
+    { from: 17, to: 22, label: "🌙 Evening", cls: "bg-slate-50/70" },
+  ];
+  return (
+    <>
+      {parts.map((p) => (
+        <div key={p.label} aria-hidden className={`pointer-events-none absolute inset-x-0 ${p.cls}`} style={{ top: p.from * HOUR_PX, height: (p.to - p.from) * HOUR_PX }}>
+          <span className="absolute top-1 right-2 text-[0.65rem] font-bold text-muted/70">{p.label}</span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** How the day looks: planned hours and the next free gap */
+function DaySummary({ items }: { items: Item[] }) {
+  const timed = items.filter((i) => i.time);
+  const minutes = timed.reduce((n, i) => n + (mins(endOf(i)) - mins(i.time!)), 0);
+  const done = items.filter((i) => i.done.length).length;
+  if (!items.length) return null;
+  const tiles = [
+    { label: "Planned", value: `${items.length}` },
+    { label: "Hours", value: minutes ? `${Math.round((minutes / 60) * 10) / 10}h` : "–" },
+    { label: "Done", value: `${done}/${items.length}` },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {tiles.map((t) => (
+        <div key={t.label} className="rounded-2xl bg-white py-2 text-center shadow-soft">
+          <p className="font-display text-lg font-medium text-ink tabular-nums">{t.value}</p>
+          <p className="text-[0.7rem] font-bold text-muted">{t.label}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -471,14 +619,16 @@ function EventSheet({ editing, onClose, store, onDeleted }: { editing: Editing |
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [end, setEnd] = useState("");
+  const [pillar, setPillar] = useState<PillarId | null>(null);
   const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
     if (!editing || "id" in editing) return;
-    setTitle("");
+    setTitle(editing.title ?? "");
+    setPillar(editing.pillar ?? null);
     setDate(editing.date);
     setTime(editing.time ?? "");
-    setEnd(editing.time ? addMinutes(editing.time, 60) : "");
+    setEnd(editing.time ? addMinutes(editing.time, editing.minutes ?? 60) : "");
   }, [editing]);
   useEffect(() => setConfirm(false), [editing]);
 
@@ -544,7 +694,17 @@ function EventSheet({ editing, onClose, store, onDeleted }: { editing: Editing |
     const t = tidyTitle(w.title);
     const d = detect(t);
     const start = w.time ?? (time || null);
-    store.addItem({ title: t, emoji: d.emoji, pillar: d.pillar, kind: "task", date: w.date ?? date, time: start, end: w.end ?? (start ? end || addMinutes(start, 60) : null), remind: !!start });
+    const type = BLOCK_TYPES.find((b) => b.pillar === pillar);
+    store.addItem({
+      title: t,
+      emoji: type && d.emoji === "🌱" ? type.emoji : d.emoji,
+      pillar: pillar ?? d.pillar,
+      kind: "task",
+      date: w.date ?? date,
+      time: start,
+      end: w.end ?? (start ? end || addMinutes(start, 60) : null),
+      remind: !!start,
+    });
     onClose();
   };
 
@@ -555,7 +715,33 @@ function EventSheet({ editing, onClose, store, onDeleted }: { editing: Editing |
           <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} placeholder="What's the plan?" aria-label="Title" className={`${inputCls} flex-1`} />
           <MicButton onText={(t) => setTitle(t)} />
         </div>
+        <div>
+          <p className="mb-1.5 text-xs font-bold tracking-wider text-muted uppercase">Kind of block</p>
+          <div className="flex flex-wrap gap-1.5">
+            {BLOCK_TYPES.map((b) => {
+              const p = pillarById[b.pillar];
+              const sel = (pillar ?? (title.trim() ? detect(title).pillar : null)) === b.pillar;
+              return (
+                <button key={b.pillar} type="button" onClick={() => setPillar(b.pillar)} aria-pressed={sel} className={`flex h-9 items-center gap-1 rounded-full px-3 text-[0.85rem] font-bold ${sel ? `${p.solid}` : `${p.tint} text-ink`}`}>
+                  {b.emoji} {b.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <WhenFields date={date} time={time} end={end} onDate={setDate} onTime={(v) => (setTime(v), setEnd(v ? addMinutes(v, 60) : ""))} onEnd={setEnd} />
+        {time && (
+          <div className="flex gap-1.5">
+            {[15, 30, 45, 60, 90, 120].map((m) => {
+              const sel = end === addMinutes(time, m);
+              return (
+                <button key={m} type="button" onClick={() => setEnd(addMinutes(time, m))} className={`h-9 flex-1 rounded-full text-[0.8rem] font-bold ${sel ? "bg-ink text-white" : "bg-surface text-ink"}`}>
+                  {m < 60 ? `${m}m` : `${m / 60}h`}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <button type="button" onClick={save} disabled={!title.trim()} className={primaryBtn}>
           <Plus className="h-5 w-5" strokeWidth={3} /> Add to planner
         </button>

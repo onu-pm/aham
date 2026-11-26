@@ -1,7 +1,7 @@
 "use client";
 
 import { Capacitor } from "@capacitor/core";
-import { taskDay, dateKey, daysAgo, type Item } from "./store";
+import { taskDay, dateKey, daysAgo, type Item, type TodoList } from "./store";
 
 export const isNative = () => Capacitor.isNativePlatform();
 
@@ -45,7 +45,7 @@ const DAYS_AHEAD = 7;
  * Replaces all pending reminders with ones for the next week, so they fire even when Aham is closed.
  * Habits skip days already checked off; tasks fire once on their day.
  */
-export async function syncNativeReminders(items: Item[], todayKey: string): Promise<void> {
+export async function syncNativeReminders(items: Item[], todayKey: string, lists: TodoList[] = []): Promise<void> {
   const { LocalNotifications: ln } = await notificationsModule();
   if ((await ln.checkPermissions()).display !== "granted") return;
 
@@ -68,6 +68,14 @@ export async function syncNativeReminders(items: Item[], todayKey: string): Prom
       const when = at(day, i.time);
       if (when.getTime() > now)
         list.push({ id: idFor(`${i.id}:${day}`), title: `${i.emoji} ${i.title}`, body: i.steps.length ? `Start with: ${i.steps.find((s) => !s.done)?.text ?? i.steps[0].text}` : "It's time. Just the first tiny step.", schedule: { at: when, allowWhileIdle: true } });
+    }
+  }
+  // Tasks with a time on their list's day
+  for (const l of lists) {
+    for (const x of l.items) {
+      if (!x.time || x.done) continue;
+      const when = at(l.date, x.time);
+      if (when.getTime() > now) list.push({ id: idFor(`${x.id}:${l.date}`), title: `${l.emoji ?? "✅"} ${x.text}`, body: `From your ${l.title} list`, schedule: { at: when, allowWhileIdle: true } });
     }
   }
   if (list.length) await ln.schedule({ notifications: list });

@@ -50,7 +50,9 @@ export function useCloudSync(store: Store, auth: AuthState) {
   };
 
   const pull = async (uid: string) => {
-    const { data, error } = await supabase().from("user_state").select("data, updated_at").eq("user_id", uid).maybeSingle();
+    // Offline, requests can hang while the login refreshes; give up after a few seconds
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("offline")), 4000));
+    const { data, error } = await Promise.race([supabase().from("user_state").select("data, updated_at").eq("user_id", uid).maybeSingle(), timeout]);
     if (error) throw error;
     return data as { data: unknown; updated_at: string } | null;
   };

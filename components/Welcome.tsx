@@ -42,9 +42,9 @@ export function Welcome({ store }: { store: Store }) {
             <p className="mt-2 text-lg text-muted">A calm place to plan your days, build habits and get things done. Type or just speak.</p>
             <ul className="mt-8 space-y-3">
               {[
-                ["🗓️", "Plan", "A calendar for your day, week and month"],
-                ["🌱", "Habits", "Tick them off and watch your streaks grow"],
-                ["📝", "Lists", "Simple checklists, dated for you"],
+                ["✅", "Tasks", "Groceries, errands and to-dos in one tap"],
+                ["🗓️", "Plan", "Your day in calm, colourful time blocks"],
+                ["🌱", "Grow", "Build or quit habits and watch them bloom"],
               ].map(([e, t, d]) => (
                 <li key={t} className="flex items-center gap-3 rounded-3xl bg-white p-3 shadow-soft">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl" aria-hidden>

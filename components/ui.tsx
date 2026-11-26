@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { celebrate } from "@/lib/fx";
 
 /* One design system for every screen:
    page title → section label → white card (rounded-3xl, soft shadow) → rows/chips */
@@ -134,7 +135,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center md:items-center">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-ink/25 backdrop-blur-[2px]" />
+      <button type="button" aria-label="Close" onClick={onClose} className="animate-backdrop absolute inset-0 bg-ink/30 backdrop-blur-[3px]" />
       <div
         role="dialog"
         aria-modal="true"
@@ -161,8 +162,11 @@ export function CheckCircle({ done, solid, onClick, label }: { done: boolean; so
       type="button"
       aria-pressed={done}
       aria-label={label}
-      onClick={onClick}
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
+      onClick={(e) => {
+        if (!done) celebrate(e.currentTarget);
+        onClick();
+      }}
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-300 active:scale-90 ${
         done ? `${solid} animate-pop` : "border-2 border-stone-300 bg-white"
       }`}
     >

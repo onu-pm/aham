@@ -48,7 +48,11 @@ export default function Page() {
 
   const reminders = useReminders(store.state, store.todayKey, store.ready, (msg) => showToast({ msg }, 8000));
 
+  // Pages glide in from the side of the tab you came from
+  const ORDER: Tab[] = ["lists", "plan", "home", "grow", "me"];
+  const [dir, setDir] = useState<"left" | "right">("right");
   const go = (t: Tab) => {
+    setDir(ORDER.indexOf(t) < ORDER.indexOf(tab) ? "left" : "right");
     setTab(t);
     setOpenId(null);
     window.scrollTo({ top: 0 });
@@ -56,7 +60,9 @@ export default function Page() {
 
   // From Home, open the item where it lives: tasks in Plan, habits and goals in Grow
   const openItem = (i: Item) => {
-    setTab(i.kind === "task" ? "plan" : "grow");
+    const t: Tab = i.kind === "task" ? "plan" : "grow";
+    setDir(ORDER.indexOf(t) < ORDER.indexOf(tab) ? "left" : "right");
+    setTab(t);
     setOpenId(i.id);
   };
 
@@ -75,7 +81,7 @@ export default function Page() {
             <Loading text={signedIn ? "Bringing your days back…" : "Taking a breath…"} />
           </div>
         ) : (
-          <div key={tab} className="animate-in">
+          <div key={tab} className={dir === "left" ? "page-left" : "page-right"}>
             {tab === "home" ? (
               <Home store={store} onOpen={openItem} onGo={go} />
             ) : tab === "grow" ? (

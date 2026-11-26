@@ -31,11 +31,14 @@ export type Item = {
   /** Habits: how many times a day counts as "met" (default 1), and the tally per day */
   target?: number;
   counts?: Record<string, number>;
+  /** Habits: building something up, or quitting something (days clean) */
+  mode?: "build" | "quit";
 };
 
-export type ListItem = { id: string; text: string; done: boolean };
+/** A to-do; an optional "HH:MM" time makes it a reminder on its list's day */
+export type ListItem = { id: string; text: string; done: boolean; time?: string | null };
 /** A to-do list stamped with the day it belongs to */
-export type TodoList = { id: string; title: string; date: string; createdAt: number; items: ListItem[] };
+export type TodoList = { id: string; title: string; date: string; createdAt: number; items: ListItem[]; emoji?: string };
 
 /** Whether a step is done; habit steps are tracked per day */
 export function stepDone(item: Item, stepId: string, key: string): boolean {
@@ -167,7 +170,7 @@ function load(): State {
 }
 
 export type NewItem = Pick<Item, "title" | "emoji" | "pillar" | "kind"> &
-  Partial<Pick<Item, "steps" | "unit" | "total" | "date" | "time" | "end" | "remind" | "target">>;
+  Partial<Pick<Item, "steps" | "unit" | "total" | "date" | "time" | "end" | "remind" | "target" | "mode">>;
 export type NewEntry = Pick<Entry, "title" | "body" | "mood" | "pillar" | "folderId">;
 
 export function useAham() {
@@ -268,8 +271,8 @@ export function useAham() {
   const mapList = (id: string, fn: (l: TodoList) => TodoList) =>
     setState((s) => ({ ...s, lists: s.lists.map((l) => (l.id === id ? fn(l) : l)) }));
 
-  const addList = useCallback((title: string, date: string, texts: string[] = []) => {
-    const list: TodoList = { id: uid(), title, date, createdAt: Date.now(), items: texts.map((text) => ({ id: uid(), text, done: false })) };
+  const addList = useCallback((title: string, date: string, texts: string[] = [], emoji?: string) => {
+    const list: TodoList = { id: uid(), title, date, emoji, createdAt: Date.now(), items: texts.map((text) => ({ id: uid(), text, done: false })) };
     setState((s) => ({ ...s, lists: [list, ...s.lists] }));
     return list.id;
   }, []);
@@ -281,7 +284,12 @@ export function useAham() {
   const restoreList = useCallback((list: TodoList) => setState((s) => ({ ...s, lists: [list, ...s.lists.filter((l) => l.id !== list.id)] })), []);
 
   const addListItem = useCallback(
-    (id: string, text: string) => mapList(id, (l) => ({ ...l, items: [...l.items, { id: uid(), text, done: false }] })),
+    (id: string, text: string, time: string | null = null) => mapList(id, (l) => ({ ...l, items: [...l.items, { id: uid(), text, done: false, time }] })),
+    [],
+  );
+
+  const setListItemTime = useCallback(
+    (id: string, itemId: string, time: string | null) => mapList(id, (l) => ({ ...l, items: l.items.map((x) => (x.id === itemId ? { ...x, time } : x)) })),
     [],
   );
 
@@ -308,7 +316,7 @@ export function useAham() {
       const target = rest.find((l) => l.date === toDate && l.title === from.title);
       const moved = left.map((x) => ({ ...x, id: uid() }));
       if (target) return { ...s, lists: rest.map((l) => (l.id === target.id ? { ...l, items: [...l.items, ...moved] } : l)) };
-      return { ...s, lists: [{ id: uid(), title: from.title, date: toDate, createdAt: Date.now(), items: moved }, ...rest] };
+      return { ...s, lists: [{ id: uid(), title: from.title, emoji: from.emoji, date: toDate, createdAt: Date.now(), items: moved }, ...rest] };
     });
   }, []);
 
@@ -382,6 +390,7 @@ export function useAham() {
     deleteList,
     restoreList,
     addListItem,
+    setListItemTime,
     toggleListItem,
     editListItem,
     removeListItem,

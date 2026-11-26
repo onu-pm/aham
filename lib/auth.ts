@@ -19,6 +19,17 @@ export function authMessage(e: unknown): string {
   return m;
 }
 
+/** The login Supabase saved on this device, read directly so it still works offline */
+function savedSession(): Session | null {
+  try {
+    const key = Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
+    const s = key ? JSON.parse(localStorage.getItem(key) ?? "null") : null;
+    return s?.user && s?.refresh_token ? (s as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useAuth() {
   const [state, setState] = useState<AuthState>(authEnabled ? { status: "loading" } : { status: "off" });
   // Arrived from a "reset password" email: ask for a new one
@@ -27,10 +38,26 @@ export function useAuth() {
   useEffect(() => {
     if (!authEnabled) return;
     const sb = supabase();
-    sb.auth.getSession().then(({ data }) => setState(data.session ? { status: "signedIn", session: data.session } : { status: "signedOut" }));
+    // Offline, Supabase keeps retrying the refresh; don't make people wait on it
+    let settled = false;
+    const fallback = setTimeout(() => {
+      const saved = savedSession();
+      if (!settled && saved) setState((s) => (s.status === "loading" ? { status: "signedIn", session: saved } : s));
+    }, 3000);
+    sb.auth.getSession().then(({ data, error }) => {
+      settled = true;
+      clearTimeout(fallback);
+      if (data.session) return setState({ status: "signedIn", session: data.session });
+      // Offline with a saved login: stay signed in and sync once the connection is back
+      const saved = savedSession();
+      if (saved && (error || !navigator.onLine)) return setState({ status: "signedIn", session: saved });
+      setState({ status: "signedOut" });
+    });
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") setRecovering(true);
-      setState(session ? { status: "signedIn", session } : { status: "signedOut" });
+      if (session) return setState({ status: "signedIn", session });
+      // Only a real sign-out ends the session; a failed refresh while offline doesn't
+      if (event === "SIGNED_OUT") setState({ status: "signedOut" });
     });
 
     // Android: Google sends people back to the app through a deep link carrying a one-time code
@@ -47,6 +74,7 @@ export function useAuth() {
       });
     }
     return () => {
+      clearTimeout(fallback);
       sub.subscription.unsubscribe();
       remove?.();
     };
