@@ -34,7 +34,23 @@ export function Lists({ store, onRemoved }: { store: Store; onRemoved: (list: To
   const [custom, setCustom] = useState(false);
   const lists = store.state.lists;
   const onDay = lists.filter((l) => l.date === day).sort((a, b) => a.createdAt - b.createdAt);
-  const strip = Array.from({ length: 7 }, (_, i) => dateKey(daysAgo(3 - i)));
+  // Two weeks either side of today, scrollable
+  const strip = Array.from({ length: 29 }, (_, i) => dateKey(daysAgo(14 - i)));
+  const stripRef = useRef<HTMLDivElement>(null);
+  // An always-visible scroll indicator (phones hide real scrollbars until you scroll)
+  const [bar, setBar] = useState({ left: 0, width: 0.3 });
+  const onStripScroll = () => {
+    const el = stripRef.current;
+    if (!el) return;
+    const width = el.clientWidth / el.scrollWidth;
+    setBar({ width, left: (el.scrollLeft / Math.max(1, el.scrollWidth - el.clientWidth)) * (1 - width) });
+  };
+  useEffect(() => {
+    stripRef.current?.querySelector(`[data-key="${day}"]`)?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    const t = setTimeout(onStripScroll, 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day]);
 
   // Open the first list with something left, so the day starts in the right place
   useEffect(() => {
@@ -48,10 +64,18 @@ export function Lists({ store, onRemoved }: { store: Store; onRemoved: (list: To
   const total = onDay.reduce((n, l) => n + l.items.length, 0);
   const done = onDay.reduce((n, l) => n + l.items.filter((x) => x.done).length, 0);
 
-  /** Tapping a kind opens that day's list of it, or makes one */
+  // Lists still waiting to be finished (the quick "Today" list doesn't count)
+  const MAX_OPEN = 5;
+  const openLists = lists.filter((l) => l.title !== "Today" && !(l.items.length > 0 && l.items.every((x) => x.done)));
+  const full = openLists.length >= MAX_OPEN;
+  const [nudge, setNudge] = useState(false);
+
+  /** Tapping a kind opens that day's list of it, or makes one, while fewer than 5 are open */
   const openKind = (title: string, emoji: string) => {
     const existing = onDay.find((l) => l.title === title);
-    setOpenId(existing ? existing.id : store.addList(title, day, [], emoji));
+    if (existing) return setOpenId(existing.id);
+    if (full) return setNudge(true);
+    setOpenId(store.addList(title, day, [], emoji));
   };
 
   /** The quick box adds to the day's "Today" list; "at 5pm" turns it into a reminder */
@@ -76,14 +100,30 @@ export function Lists({ store, onRemoved }: { store: Store; onRemoved: (list: To
           <h1 className="text-[2rem] leading-tight font-medium tracking-tight text-ink">Tasks</h1>
         </div>
         {total > 0 && (
-          <span className="mb-1 rounded-full bg-white px-3 py-1.5 text-[0.85rem] font-bold text-ink shadow-soft tabular-nums">
-            {done}/{total} done
+          <span className="mb-1 rounded-full bg-white px-3 py-1.5 text-[0.8rem] font-medium text-ink shadow-soft tabular-nums">
+            {Math.round((done / total) * 100)}% done
           </span>
         )}
       </header>
 
-      {/* A week around today */}
-      <div className="grid grid-cols-7 gap-1.5">
+      {/* Status at a glance */}
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { v: total - done, l: "To do", tone: "tone-ochre", c: "text-ochre-700" },
+          { v: done, l: "Done", tone: "tone-moss", c: "text-moss-700" },
+          { v: `${openLists.length}/${MAX_OPEN}`, l: "Open lists", tone: "tone-slate", c: "text-slate-700" },
+          { v: onDay.reduce((n, l) => n + l.items.filter((x) => x.time && !x.done).length, 0), l: "Reminders", tone: "tone-clay", c: "text-clay-700" },
+        ].map((x) => (
+          <div key={x.l} className={`rounded-2xl px-1 py-2.5 text-center ${x.tone}`}>
+            <p className="font-display text-[1.3rem] leading-none font-medium text-ink tabular-nums">{x.v}</p>
+            <p className={`mt-1 text-[0.66rem] font-medium ${x.c}`}>{x.l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Dates: scroll back and forward */}
+      <div>
+      <div ref={stripRef} onScroll={onStripScroll} className="no-scrollbar -mx-4 flex snap-x gap-1.5 overflow-x-auto px-4 py-1">
         {strip.map((k) => {
           const ls = lists.filter((l) => l.date === k);
           const t = ls.reduce((n, l) => n + l.items.length, 0);
@@ -92,18 +132,23 @@ export function Lists({ store, onRemoved }: { store: Store; onRemoved: (list: To
           return (
             <button
               key={k}
+              data-key={k}
               type="button"
               onClick={() => setDay(k)}
               aria-pressed={sel}
               aria-label={`${longDay(k)}: ${d} of ${t} done`}
-              className={`flex h-[3.75rem] flex-col items-center justify-center rounded-2xl ${sel ? "bg-ink text-white" : k === today ? "bg-brand-100 text-ink" : "bg-white text-ink shadow-soft"}`}
+              className={`flex h-[3.6rem] w-12 shrink-0 snap-center flex-col items-center justify-center rounded-2xl transition-all duration-300 ${sel ? "scale-105 bg-ink text-white" : k === today ? "bg-brand-100 text-ink" : "bg-white text-ink shadow-soft"}`}
             >
               <span className={`text-[0.62rem] font-bold uppercase ${sel ? "text-white/70" : "text-muted"}`}>{toDate(k).toLocaleDateString(undefined, { weekday: "short" })}</span>
-              <span className="text-[1rem] leading-tight font-extrabold">{toDate(k).getDate()}</span>
+              <span className="font-display text-[1rem] leading-tight font-medium">{toDate(k).getDate()}</span>
               <span className={`mt-0.5 h-1.5 w-1.5 rounded-full ${!t ? "bg-transparent" : d === t ? "bg-moss-400" : sel ? "bg-brand-300" : "bg-brand-500"}`} />
             </button>
           );
         })}
+      </div>
+      <div className="mx-auto mt-1.5 h-1 w-28 overflow-hidden rounded-full bg-ink/8" aria-hidden>
+        <div className="h-full rounded-full bg-brand-500 transition-[margin] duration-150" style={{ width: `${bar.width * 100}%`, marginLeft: `${bar.left * 100}%` }} />
+      </div>
       </div>
 
       <AddBar placeholder="Add a task… e.g. “call bank at 5pm”" onAdd={quickAdd} />
@@ -130,14 +175,30 @@ export function Lists({ store, onRemoved }: { store: Store; onRemoved: (list: To
           })}
           <button
             type="button"
-            onClick={() => setCustom(true)}
+            onClick={() => (full ? setNudge(true) : setCustom(true))}
             className="flex h-[4.5rem] w-[4.75rem] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-brand-200 text-brand-700 active:scale-95"
           >
             <Plus className="h-5 w-5" />
             <span className="text-[0.72rem] font-bold">Your own</span>
           </button>
         </div>
-        {custom && (
+        {nudge && full && (
+          <div role="status" className="animate-in mt-2 flex items-start gap-3 rounded-2xl bg-ochre-50 p-3">
+            <span className="text-xl" aria-hidden>
+              🧺
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.9rem] font-semibold text-ink">Mark your previous {MAX_OPEN} lists complete to add a new one.</p>
+              <p className="mt-0.5 text-[0.8rem] text-muted">
+                Still open: {openLists.slice(0, MAX_OPEN).map((l) => `${l.emoji ?? "📋"} ${l.title}`).join(", ")}
+              </p>
+            </div>
+            <button type="button" onClick={() => setNudge(false)} aria-label="Dismiss" className="flex h-7 w-7 shrink-0 items-center justify-center text-muted">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        {custom && !full && (
           <AddBar
             autoFocus
             className="mt-2"
@@ -203,9 +264,13 @@ function ListCard({ list, store, today, open, onToggle, onRemoved }: { list: Tod
   };
 
   return (
-    <div ref={ref} className={`overflow-hidden rounded-3xl bg-white shadow-soft transition-shadow ${open ? "ring-2 ring-brand-200" : ""}`}>
+    <div
+      ref={ref}
+      data-open={open}
+      className={`accordion overflow-hidden rounded-3xl bg-white transition-all duration-500 ${open ? "shadow-[0_18px_40px_-20px_rgb(64_52_30/0.45)] ring-1 ring-brand-200" : "shadow-soft"}`}
+    >
       <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 p-3 text-left">
-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl ${kind?.tint ?? "bg-surface"}`} aria-hidden>
+        <span className={`accordion-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl ${kind?.tint ?? "bg-surface"}`} aria-hidden>
           {list.emoji ?? kind?.emoji ?? "📋"}
         </span>
         <span className="min-w-0 flex-1">
@@ -219,17 +284,20 @@ function ListCard({ list, store, today, open, onToggle, onRemoved }: { list: Tod
             </span>
           </span>
         </span>
-        <ChevronDown className={`h-5 w-5 shrink-0 text-muted transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${open ? "rotate-180 bg-ink text-white" : "bg-surface text-muted"}`}>
+          <ChevronDown className="h-4 w-4" />
+        </span>
       </button>
 
       <Collapse open={open}>
         <div className="border-t border-line px-3 pt-1 pb-3">
-          <ul>
+          <ul className="rows">
             {[...list.items]
               .sort((a, b) => Number(a.done) - Number(b.done) || (a.time ?? "99").localeCompare(b.time ?? "99"))
-              .map((x) => (
+              .map((x, i) => (
                 <Row
                   key={x.id}
+                  index={i}
                   text={x.text}
                   done={x.done}
                   time={x.time ?? null}
@@ -296,6 +364,7 @@ function ListCard({ list, store, today, open, onToggle, onRemoved }: { list: Tod
 
 /** A big checkbox; checking strikes the line through */
 function Row({
+  index = 0,
   text,
   done,
   time,
@@ -304,6 +373,7 @@ function Row({
   onTime,
   onRemove,
 }: {
+  index?: number;
   text: string;
   done: boolean;
   time: string | null;
@@ -314,7 +384,7 @@ function Row({
 }) {
   const [editing, setEditing] = useState(false);
   return (
-    <li className="flex items-center gap-3 border-b border-line py-2 last:border-0">
+    <li className="flex min-h-11 items-center gap-2.5 border-b border-line py-1.5 last:border-0" style={{ ["--i" as string]: index }}>
       <button
         type="button"
         onClick={(e) => {
@@ -323,9 +393,11 @@ function Row({
         }}
         aria-pressed={done}
         aria-label={`${text}: ${done ? "checked" : "check"}`}
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border-2 transition-all ${done ? "animate-pop border-moss-400 bg-moss-400 text-white" : "border-stone-300 bg-white active:scale-90"}`}
+        className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center"
       >
-        {done && <Check className="h-5 w-5" strokeWidth={3.5} />}
+        <span className={`flex h-[1.35rem] w-[1.35rem] items-center justify-center rounded-md border-[1.5px] transition-all duration-300 ${done ? "animate-pop border-moss-400 bg-moss-400 text-white" : "border-stone-300 bg-white"}`}>
+          {done && <Check className="h-3.5 w-3.5" strokeWidth={3.5} />}
+        </span>
       </button>
       {editing ? (
         <input
@@ -339,7 +411,7 @@ function Row({
         />
       ) : (
         <button type="button" onClick={() => setEditing(true)} className="min-w-0 flex-1 text-left">
-          <span className={`block text-[1rem] transition-colors ${done ? "text-muted line-through decoration-2" : "text-ink"}`}>{text}</span>
+          <span className={`block text-[0.95rem] leading-snug transition-colors duration-300 ${done ? "text-muted line-through decoration-[1.5px]" : "text-ink"}`}>{text}</span>
         </button>
       )}
       {time ? (

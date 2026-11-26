@@ -34,11 +34,11 @@ export function BottomNav({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => v
                   onClick={() => onChange(id)}
                   aria-current={active ? "page" : undefined}
                   aria-label="Home"
-                  className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-md transition-all duration-300 active:scale-90 ${
-                    active ? "scale-105 bg-ink text-white" : "bg-brand-100 text-ink"
+                  className={`relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300 active:scale-90 ${
+                    active ? "scale-105 bg-ink text-white shadow-[0_8px_20px_-6px_rgb(31_42_34/0.5)]" : "bg-transparent text-muted shadow-none"
                   }`}
                 >
-                  <Icon key={String(active)} className={`h-6 w-6 ${active ? "animate-pop" : ""}`} strokeWidth={2.2} />
+                  <Icon key={String(active)} className={`h-6 w-6 ${active ? "animate-pop" : ""}`} strokeWidth={active ? 2.2 : 1.8} />
                 </button>
               </li>
             );

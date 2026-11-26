@@ -78,14 +78,14 @@ export default function Page() {
       <main className="pt-safe mx-auto max-w-md px-4 pb-32 md:max-w-xl">
         {!store.ready || gated ? (
           <div className="pt-16">
-            <Loading text={signedIn ? "Bringing your days back…" : "Taking a breath…"} />
+            <Loading text={signedIn ? "Bringing your sunshine back…" : "Getting your day ready…"} />
           </div>
         ) : (
           <div key={tab} className={dir === "left" ? "page-left" : "page-right"}>
             {tab === "home" ? (
               <Home store={store} onOpen={openItem} onGo={go} />
             ) : tab === "grow" ? (
-              <Grow store={store} openId={openId} setOpenId={setOpenId} onDeleted={onDeleted} />
+              <Grow store={store} openId={openId} setOpenId={setOpenId} onDeleted={onDeleted} userId={auth.state.status === "signedIn" ? auth.state.session.user.id : null} />
             ) : tab === "plan" ? (
               <Plan store={store} openId={openId} setOpenId={setOpenId} onDeleted={onDeleted} notify={reminders.permission} onEnableNotify={reminders.enable} />
             ) : tab === "lists" ? (

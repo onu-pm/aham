@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { celebrate } from "@/lib/fx";
 
@@ -121,38 +122,52 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
 }
 
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    // Keep the field being typed in visible above the keyboard
+    const onFocus = (e: FocusEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest?.("[role=dialog]")) setTimeout(() => t.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+    };
     document.addEventListener("keydown", onKey);
+    document.addEventListener("focusin", onFocus);
     document.body.style.overflow = "hidden";
+    document.body.classList.add("sheet-open");
     return () => {
       document.removeEventListener("keydown", onKey);
+      document.removeEventListener("focusin", onFocus);
       document.body.style.overflow = "";
+      document.body.classList.remove("sheet-open");
     };
   }, [open, onClose]);
 
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center md:items-center">
+  if (!open || !mounted) return null;
+  // Rendered at the top of the page, so nothing (menu, page animations) can sit over it
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end justify-center md:items-center">
       <button type="button" aria-label="Close" onClick={onClose} className="animate-backdrop absolute inset-0 bg-ink/30 backdrop-blur-[3px]" />
       <div
         role="dialog"
         aria-modal="true"
-        className="animate-sheet pb-nav relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white md:rounded-[1.75rem]"
+        className="animate-sheet relative max-h-[85vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl bg-white pb-[max(env(safe-area-inset-bottom),1rem)] shadow-2xl md:rounded-3xl"
       >
-        <div className="sticky top-0 z-10 bg-white px-4 pt-2.5 pb-2">
-          <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-stone-200 md:hidden" />
+        <div className="sticky top-0 z-10 bg-white px-4 pt-2 pb-1.5">
+          <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-stone-200 md:hidden" />
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 text-[1.25rem] font-extrabold text-ink">{title}</div>
-            <button type="button" onClick={onClose} aria-label="Close" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
-              <X className="h-5 w-5" />
+            <div className="min-w-0 font-display text-[1.05rem] font-medium text-ink">{title}</div>
+            <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-ink active:scale-90">
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <div className="px-4 pb-5">{children}</div>
+        <div className="px-4 pt-1">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -166,27 +181,31 @@ export function CheckCircle({ done, solid, onClick, label }: { done: boolean; so
         if (!done) celebrate(e.currentTarget);
         onClick();
       }}
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-300 active:scale-90 ${
-        done ? `${solid} animate-pop` : "border-2 border-stone-300 bg-white"
-      }`}
+      className="-m-1.5 flex h-10 w-10 shrink-0 items-center justify-center"
     >
-      {done && (
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 12.5l4.5 4.5L19 7.5" />
-        </svg>
-      )}
+      <span
+        className={`flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 active:scale-90 ${
+          done ? `${solid} animate-pop` : "border-[1.5px] border-stone-300 bg-white"
+        }`}
+      >
+        {done && (
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        )}
+      </span>
     </button>
   );
 }
 
 export const inputCls =
-  "h-12 w-full rounded-2xl bg-surface px-4 text-ink outline-none placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-brand-300";
+  "h-11 w-full rounded-2xl bg-surface px-3.5 text-[0.95rem] text-ink outline-none placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-brand-300";
 
 export const primaryBtn =
-  "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-25";
+  "flex h-11 w-full items-center justify-center gap-2 rounded-full bg-ink text-[0.95rem] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-25";
 
 export const softBtn =
-  "flex h-11 items-center justify-center gap-1.5 rounded-full bg-surface font-bold text-ink transition-transform active:scale-[0.97]";
+  "flex h-10 items-center justify-center gap-1.5 rounded-full bg-surface text-[0.9rem] font-semibold text-ink transition-transform active:scale-[0.97]";
 
 /** Horizontal scroller that bleeds to the screen edge */
 export function HScroll({ children, className = "" }: { children: ReactNode; className?: string }) {

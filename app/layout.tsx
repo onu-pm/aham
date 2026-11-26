@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
+import { Bricolage_Grotesque, DM_Sans, Yatra_One } from "next/font/google";
 import "./globals.css";
 
-// Modern, warm type: Plus Jakarta Sans for reading, Bricolage Grotesque for headings
-const body = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-body" });
+// Light, airy reading type (DM Sans) with characterful headings (Bricolage Grotesque)
+const body = DM_Sans({ subsets: ["latin"], variable: "--font-body", axes: ["opsz"] });
+// The wordmark: Latin letters drawn in a Devanagari calligraphic style
+const vedic = Yatra_One({ subsets: ["latin", "devanagari"], weight: "400", variable: "--font-vedic" });
 const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display-face", axes: ["opsz", "wdth"] });
 
 export const metadata: Metadata = {
@@ -21,7 +23,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${body.variable} ${display.variable}`}>
+    <html lang="en" className={`${body.variable} ${display.variable} ${vedic.variable}`}>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
   );

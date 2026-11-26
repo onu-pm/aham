@@ -641,7 +641,7 @@ function EventSheet({ editing, onClose, store, onDeleted }: { editing: Editing |
     const set = (patch: Partial<Item>) => store.updateItem(existing.id, patch);
     return (
       <Sheet open onClose={onClose} title={<span className="flex items-center gap-2">{existing.emoji} Edit</span>}>
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center gap-1.5">
             <input value={existing.title} onChange={(e) => set({ title: e.target.value })} aria-label="Title" className={`${inputCls} flex-1 font-bold`} />
             <MicButton onText={(t) => set({ title: t })} />
@@ -710,19 +710,19 @@ function EventSheet({ editing, onClose, store, onDeleted }: { editing: Editing |
 
   return (
     <Sheet open onClose={onClose} title="New plan">
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center gap-1.5">
-          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} placeholder="What's the plan?" aria-label="Title" className={`${inputCls} flex-1`} />
+          <input autoFocus={!(editing && !("id" in editing) && editing.title)} value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} placeholder="What's the plan?" aria-label="Title" className={`${inputCls} flex-1`} />
           <MicButton onText={(t) => setTitle(t)} />
         </div>
         <div>
-          <p className="mb-1.5 text-xs font-bold tracking-wider text-muted uppercase">Kind of block</p>
+          <p className="mb-1.5 text-[0.7rem] font-semibold tracking-wider text-muted uppercase">Kind of block</p>
           <div className="flex flex-wrap gap-1.5">
             {BLOCK_TYPES.map((b) => {
               const p = pillarById[b.pillar];
               const sel = (pillar ?? (title.trim() ? detect(title).pillar : null)) === b.pillar;
               return (
-                <button key={b.pillar} type="button" onClick={() => setPillar(b.pillar)} aria-pressed={sel} className={`flex h-9 items-center gap-1 rounded-full px-3 text-[0.85rem] font-bold ${sel ? `${p.solid}` : `${p.tint} text-ink`}`}>
+                <button key={b.pillar} type="button" onClick={() => setPillar(b.pillar)} aria-pressed={sel} className={`flex h-8 items-center gap-1 rounded-full px-2.5 text-[0.8rem] font-semibold transition-all duration-200 ${sel ? `${p.solid} scale-105` : `${p.tint} text-ink`}`}>
                   {b.emoji} {b.label}
                 </button>
               );
@@ -735,7 +735,7 @@ function EventSheet({ editing, onClose, store, onDeleted }: { editing: Editing |
             {[15, 30, 45, 60, 90, 120].map((m) => {
               const sel = end === addMinutes(time, m);
               return (
-                <button key={m} type="button" onClick={() => setEnd(addMinutes(time, m))} className={`h-9 flex-1 rounded-full text-[0.8rem] font-bold ${sel ? "bg-ink text-white" : "bg-surface text-ink"}`}>
+                <button key={m} type="button" onClick={() => setEnd(addMinutes(time, m))} className={`h-8 flex-1 rounded-full text-[0.78rem] font-semibold ${sel ? "bg-ink text-white" : "bg-surface text-ink"}`}>
                   {m < 60 ? `${m}m` : `${m / 60}h`}
                 </button>
               );
@@ -751,15 +751,15 @@ function EventSheet({ editing, onClose, store, onDeleted }: { editing: Editing |
 }
 
 function WhenFields({ date, time, end, onDate, onTime, onEnd }: { date: string; time: string; end: string; onDate: (v: string) => void; onTime: (v: string) => void; onEnd: (v: string) => void }) {
-  const field = "h-11 min-w-0 rounded-2xl bg-surface px-3 text-[0.95rem] font-semibold text-ink outline-none";
+  const field = "h-10 min-w-0 rounded-xl bg-surface px-2.5 text-[0.88rem] font-medium text-ink outline-none";
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-2">
-        <CalendarDays className="h-5 w-5 shrink-0 text-muted" />
+        <CalendarDays className="h-4 w-4 shrink-0 text-muted" />
         <input type="date" value={date} onChange={(e) => e.target.value && onDate(e.target.value)} aria-label="Date" className={`${field} flex-1`} />
       </label>
       <div className="flex items-center gap-2">
-        <Clock className="h-5 w-5 shrink-0 text-muted" />
+        <Clock className="h-4 w-4 shrink-0 text-muted" />
         {time ? (
           <>
             <input type="time" value={time} onChange={(e) => onTime(e.target.value)} aria-label="Start time" className={`${field} w-0 flex-1 px-2`} />

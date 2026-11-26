@@ -144,7 +144,44 @@ function Checklist() {
   );
 }
 
-const FIGURES = { meditate: Meditate, water: Water, calendar: Calendar, checklist: Checklist };
+/** Arms up, mid-hop, leaves and sparkles around: pure joy */
+function Cheer() {
+  return (
+    <>
+      <circle cx={150} cy={44} r={20} fill="var(--color-ochre-100)" className="animate-twinkle" style={{ animationDuration: "4s" }} />
+      <ellipse cx={100} cy={146} rx={44} ry={6} fill="var(--color-brand-100)" className="animate-breathe" style={{ transformOrigin: "100px 146px" }} />
+      <g className="animate-hop">
+        <path d="M84 112 L74 136 M116 112 L126 136" {...S} />
+        <path d="M68 137 h10 M122 137 h10" {...S} />
+        <path d="M80 76 Q100 68 120 76 L124 116 H76 Z" fill="var(--color-clay-400)" {...S} />
+        <path d="M82 80 Q66 64 62 44" fill="none" {...S} />
+        <path d="M118 80 Q134 64 138 44" fill="none" {...S} />
+        <circle cx={61} cy={41} r={4} fill="#fff" {...S} />
+        <circle cx={139} cy={41} r={4} fill="#fff" {...S} />
+        <path d="M100 64 L100 70" {...S} />
+        <Head x={100} y={48} bun />
+        <path d="M93 47 q2.5 -2.5 5 0 M102 47 q2.5 -2.5 5 0" fill="none" {...S} strokeWidth={1.8} />
+        <path d="M94 54 q6 6 12 0 Z" fill={ink} {...S} strokeWidth={1.6} />
+      </g>
+      <g className="animate-twinkle" style={{ animationDelay: "-0.4s" }}>
+        <path d="M40 40 l0 10 M35 45 l10 0" {...S} strokeWidth={2} />
+      </g>
+      <g className="animate-twinkle" style={{ animationDelay: "-1.2s" }}>
+        <path d="M168 92 l0 8 M164 96 l8 0" {...S} strokeWidth={2} />
+      </g>
+      <g className="animate-sway" style={{ transformOrigin: "36px 120px" }}>
+        <Leaf x={36} y={120} r={-30} fill="var(--color-moss-100)" />
+      </g>
+      <g className="animate-sway" style={{ transformOrigin: "166px 128px", animationDelay: "-2s" }}>
+        <Leaf x={166} y={128} r={34} s={0.85} fill="var(--color-ochre-100)" />
+      </g>
+      <circle cx={52} cy={78} r={3} fill="var(--color-terra-400)" className="animate-twinkle" style={{ animationDelay: "-0.8s" }} />
+      <circle cx={152} cy={74} r={2.6} fill="var(--color-moss-400)" className="animate-twinkle" style={{ animationDelay: "-1.6s" }} />
+    </>
+  );
+}
+
+const FIGURES = { meditate: Meditate, water: Water, calendar: Calendar, checklist: Checklist, cheer: Cheer };
 export type FigureName = keyof typeof FIGURES;
 
 export function Figure({ name, className = "" }: { name: FigureName; className?: string }) {
@@ -157,11 +194,16 @@ export function Figure({ name, className = "" }: { name: FigureName; className?:
 }
 
 /** Full-area loader: a breathing figure and a gentle line */
-export function Loading({ text = "Taking a breath…" }: { text?: string }) {
+export function Loading({ text = "Getting your day ready…" }: { text?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center" role="status">
-      <Figure name="meditate" className="h-40 w-52" />
-      <p className="mt-2 font-display text-[1.05rem] text-muted">{text}</p>
+      <Figure name="cheer" className="h-44 w-56" />
+      <p className="mt-2 font-display text-[1.05rem] text-ink">{text}</p>
+      <span className="mt-3 flex gap-1.5" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="h-2 w-2 rounded-full bg-brand-500 animate-hop" style={{ animationDelay: `${i * 0.15}s`, animationDuration: "1s" }} />
+        ))}
+      </span>
     </div>
   );
 }

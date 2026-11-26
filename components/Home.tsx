@@ -7,7 +7,8 @@ import { fmtTime } from "./ItemCard";
 import { Figure } from "./Figures";
 import { pillarById } from "@/lib/pillars";
 import { byTime, dateKey, daysAgo, showingUpStreak, taskDay, type Item, type State, type Store } from "@/lib/store";
-import { stageFor } from "@/lib/habitTips";
+import { goalProgress, rankFor, totalXp, wheel } from "@/lib/goals";
+import { Wheel } from "./Wheel";
 
 type GoTab = "plan" | "grow" | "lists";
 
@@ -39,7 +40,13 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
   const nextPlan = plansToday.find((i) => !i.done.length && i.time && i.time >= nowHM) ?? plansToday.find((i) => !i.done.length);
   const tasksLeft = state.lists.filter((l) => l.date === todayKey).flatMap((l) => l.items.map((x) => ({ ...x, emoji: l.emoji ?? "✅" }))).filter((x) => !x.done);
   const showUp = showingUpStreak(state);
-  const best = habits.map((h) => ({ h, s: stageFor(h.done.length) })).sort((a, b) => b.h.done.length - a.h.done.length)[0];
+  // The goal closest to its next milestone, and your level
+  const closest = habits
+    .map((h) => ({ h, p: goalProgress(h) }))
+    .filter((x) => x.p.next)
+    .sort((a, b) => a.p.next!.at - a.p.done - (b.p.next!.at - b.p.done))[0];
+  const xp = totalXp(state.items);
+  const rank = rankFor(xp);
 
   // This month at a glance: the self-growth numbers that matter
   const monthStart = dateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12));
@@ -61,7 +68,12 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
     <div className="stagger space-y-3">
       <header className="flex items-center justify-between gap-3 px-1 pt-5">
         <div className="min-w-0">
-          <p className="text-[0.9rem] font-semibold text-muted">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+          <p className="text-[0.9rem] font-semibold text-muted">
+            <span className="animate-float mr-1 inline-block" aria-hidden>
+              {new Date().getHours() < 17 ? "☀️" : "🌙"}
+            </span>
+            {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+          </p>
           <h1 className="text-[2rem] leading-tight font-medium tracking-tight text-ink">
             {greeting()}
             {state.profile.name ? `, ${state.profile.name}` : ""}
@@ -73,25 +85,25 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
       </header>
 
       {/* Today: the big tile */}
-      <section className="relative overflow-hidden rounded-[1.75rem] bg-forest p-5 text-white">
-        <span aria-hidden className="absolute -top-16 -right-10 h-48 w-48 rounded-full bg-moss-400/30 blur-2xl" />
-        <span aria-hidden className="absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-ochre-400/20 blur-2xl" />
+      <section className="grad-sunrise relative overflow-hidden rounded-[1.75rem] p-5 text-ink shadow-soft">
+        <span aria-hidden className="animate-breathe absolute -top-10 -right-8 h-36 w-36 rounded-full bg-ochre-400/50 blur-xl" />
+        <span aria-hidden className="absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/50 blur-2xl" />
         <div className="relative flex items-center gap-4">
           <div className="relative h-[5.5rem] w-[5.5rem] shrink-0">
             <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-              <circle cx="50" cy="50" r="42" fill="none" strokeWidth="10" stroke="rgb(255 255 255 / 0.12)" />
-              <circle cx="50" cy="50" r="42" fill="none" strokeWidth="10" strokeLinecap="round" stroke="var(--color-brand-300)" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - (shown ? today.pct : 0))} className="transition-[stroke-dashoffset] duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]" />
+              <circle cx="50" cy="50" r="42" fill="none" strokeWidth="10" stroke="rgb(255 255 255 / 0.7)" />
+              <circle cx="50" cy="50" r="42" fill="none" strokeWidth="10" strokeLinecap="round" stroke="var(--color-moss-400)" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - (shown ? today.pct : 0))} className="transition-[stroke-dashoffset] duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]" />
             </svg>
             <span className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-display text-2xl leading-none font-medium tabular-nums">
                 <CountUp to={pct} />%
               </span>
-              <span className="text-[0.62rem] text-white/60">today</span>
+              <span className="text-[0.62rem] text-ink/60">today</span>
             </span>
           </div>
           <div className="min-w-0">
             <p className="font-display text-[1.25rem] leading-snug font-medium">{cheer}</p>
-            <p className="mt-1 text-[0.85rem] text-white/60">
+            <p className="mt-1 text-[0.85rem] text-ink/60">
               {today.total ? `${today.h.done + today.p.done + today.l.done} of ${today.total} things done` : "Nothing planned yet"}
             </p>
           </div>
@@ -100,7 +112,7 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
 
       {/* Bento: every tile opens its place */}
       <div className="grid grid-cols-2 gap-2.5">
-        <Tile tone="bg-ochre-100" onClick={() => onGo("lists")} label="Tasks" icon="✅">
+        <Tile tone="tone-ochre" onClick={() => onGo("lists")} label="Tasks" icon="✅">
           <p className="font-display text-[1.75rem] leading-none font-medium text-ink tabular-nums">
             <CountUp to={tasksLeft.length} />
           </p>
@@ -115,7 +127,7 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
           </ul>
         </Tile>
 
-        <Tile tone="bg-slate-100" onClick={() => (nextPlan ? onOpen(nextPlan) : onGo("plan"))} label="Plan" icon="🗓️">
+        <Tile tone="tone-slate" onClick={() => (nextPlan ? onOpen(nextPlan) : onGo("plan"))} label="Plan" icon="🗓️">
           {nextPlan ? (
             <>
               <p className="text-[0.8rem] font-bold text-slate-700">{nextPlan.time ? `${nextPlan.time >= nowHM ? "Next" : "Still open"} · ${fmtTime(nextPlan.time)}` : "Today"}</p>
@@ -134,7 +146,7 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
           )}
         </Tile>
 
-        <Tile tone="bg-moss-100" onClick={() => onGo("grow")} label="Grow" icon="🌱" wide>
+        <Tile tone="tone-moss" onClick={() => (closest ? onOpen(closest.h) : onGo("grow"))} label="Goals" icon="🎯" wide>
           {habits.length ? (
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
@@ -142,39 +154,38 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
                   {today.h.done}
                   <span className="text-[1rem] text-muted">/{today.h.total}</span>
                 </p>
-                <p className="text-[0.8rem] font-semibold text-moss-700">habits cared for today</p>
+                <p className="text-[0.8rem] font-semibold text-moss-700">goals done today</p>
+                {closest?.p.next && (
+                  <p className="mt-2 text-[0.78rem] text-ink/70">
+                    🏅 <span className="font-semibold text-ink">{closest.p.next.name}</span> in {closest.p.next.at - closest.p.done}{" "}
+                    {closest.p.next.at - closest.p.done === 1 ? "day" : "days"} · {closest.h.title}
+                  </p>
+                )}
               </div>
-              <div className="flex max-w-[55%] flex-wrap justify-end gap-1">
-                {habits.slice(0, 8).map((h) => (
-                  <span key={h.id} className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg ${h.done.includes(todayKey) ? "bg-white" : "bg-white/40 grayscale-[60%]"}`} title={h.title}>
-                    {stageFor(h.done.length).emoji}
-                  </span>
-                ))}
+              <div className="shrink-0 rounded-full bg-white/70 p-1">
+                <Wheel values={wheel(state.items)} size={96} />
               </div>
             </div>
           ) : (
-            <p className="font-display text-[1.05rem] font-medium text-ink">Plant your first habit →</p>
+            <p className="font-display text-[1.05rem] font-medium text-ink">Start your first goal →</p>
           )}
         </Tile>
 
-        <Tile tone="bg-clay-100" onClick={() => onGo("grow")} label="Showing up" icon="🔥">
+        <Tile tone="tone-clay" onClick={() => onGo("grow")} label="Showing up" icon="🔥">
           <p className="font-display text-[1.75rem] leading-none font-medium text-ink tabular-nums">
             <CountUp to={showUp} />
           </p>
           <p className="text-[0.8rem] font-semibold text-clay-700">{showUp === 1 ? "day in a row" : "days in a row"}</p>
         </Tile>
 
-        <Tile tone="bg-sage-100" onClick={() => (best ? onOpen(best.h) : onGo("grow"))} label="Strongest" icon={best?.s.emoji ?? "🌰"}>
-          {best && best.h.done.length > 0 ? (
-            <>
-              <p className="truncate font-display text-[1.05rem] font-medium text-ink">{best.h.title}</p>
-              <p className="text-[0.8rem] font-semibold text-sage-700">
-                {best.s.name} · {best.h.done.length} days
-              </p>
-            </>
-          ) : (
-            <p className="text-[0.85rem] text-ink/70">Your first plant will show here</p>
-          )}
+        <Tile tone="tone-sage" onClick={() => onGo("grow")} label={`Level ${rank.level}`} icon={rank.emoji}>
+          <p className="font-display text-[1.15rem] leading-tight font-medium text-ink">{rank.name}</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
+            <div className="animate-grow-x h-full rounded-full bg-moss-400" style={{ width: `${Math.max(4, rank.progress * 100)}%` }} />
+          </div>
+          <p className="mt-1 text-[0.75rem] font-semibold text-sage-700">
+            <CountUp to={xp} /> XP{rank.next ? ` · ${rank.next.at - xp} to go` : ""}
+          </p>
         </Tile>
       </div>
 
@@ -183,7 +194,7 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
       <div className="grid grid-cols-4 gap-2">
         {[
           { v: activeThisMonth, l: "Active days", tone: "bg-plum-50 text-plum-700" },
-          { v: habitDays, l: "Habit check-ins", tone: "bg-moss-50 text-moss-700" },
+          { v: habitDays, l: "Goal check-ins", tone: "bg-moss-50 text-moss-700" },
           { v: plansDone, l: "Plans done", tone: "bg-slate-50 text-slate-700" },
           { v: tasksDone, l: "Tasks ticked", tone: "bg-ochre-50 text-ochre-700" },
         ].map((x) => (
@@ -198,7 +209,7 @@ export function Home({ store, onOpen, onGo }: { store: Store; onOpen: (item: Ite
 
       {state.items.length === 0 && state.lists.length === 0 && (
         <Card className="text-center">
-          <Figure name="meditate" className="mx-auto h-36 w-48" />
+          <Figure name="cheer" className="mx-auto h-36 w-48" />
           <p className="font-display text-xl font-medium text-ink">A fresh start</p>
           <p className="mt-1 text-[0.95rem] text-muted">Add one task, one plan, or one habit. That&apos;s enough for today.</p>
         </Card>

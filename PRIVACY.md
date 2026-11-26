@@ -1,6 +1,6 @@
 # Aham Privacy Policy
 
-_Last updated: 17 November 2026_
+_Last updated: 26 November 2026_
 
 Aham is an app for planning your days, building habits and keeping simple to-do lists. This policy explains what information Aham collects, why, and the choices you have.
 
@@ -21,6 +21,10 @@ Aham is an app for planning your days, building habits and keeping simple to-do 
 | **What you add to Aham**: habits, plans and tasks (with dates, times and steps), to-do lists, your avatar and settings | To show them to you and keep them in sync across your devices. |
 
 We do **not** collect your location, contacts, photos, files, device identifiers for advertising, or browsing history.
+
+## The weekly league (optional)
+
+If you choose **Join** on the Weekly league in Grow, other Aham members who have also joined can see your **first name, avatar and the points you earned this week**. Nothing else is shown: not your goals, tasks, plans or email. You can **Leave** at any time, which removes your entry straight away.
 
 ## Where it's stored
 

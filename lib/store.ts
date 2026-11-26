@@ -33,6 +33,10 @@ export type Item = {
   counts?: Record<string, number>;
   /** Habits: building something up, or quitting something (days clean) */
   mode?: "build" | "quit";
+  /** Goals: the card it was started from, how hard, and how many days it takes */
+  goal?: string;
+  level?: "easy" | "medium" | "hard";
+  goalDays?: number;
 };
 
 /** A to-do; an optional "HH:MM" time makes it a reminder on its list's day */
@@ -61,7 +65,7 @@ export type Folder = { id: string; name: string; emoji: string };
 export type TextSize = 0 | 1 | 2;
 export const TEXT_SIZES_PX = [16, 17.5, 19];
 
-export type Profile = { name: string; avatar: string; textSize: TextSize; onboarded: boolean };
+export type Profile = { name: string; avatar: string; textSize: TextSize; onboarded: boolean; /** Joined the weekly league */ league?: boolean };
 
 export type State = {
   items: Item[];
@@ -170,7 +174,7 @@ function load(): State {
 }
 
 export type NewItem = Pick<Item, "title" | "emoji" | "pillar" | "kind"> &
-  Partial<Pick<Item, "steps" | "unit" | "total" | "date" | "time" | "end" | "remind" | "target" | "mode">>;
+  Partial<Pick<Item, "steps" | "unit" | "total" | "date" | "time" | "end" | "remind" | "target" | "mode" | "goal" | "level" | "goalDays">>;
 export type NewEntry = Pick<Entry, "title" | "body" | "mood" | "pillar" | "folderId">;
 
 export function useAham() {
@@ -192,7 +196,7 @@ export function useAham() {
   }, [state, ready]);
 
   useEffect(() => {
-    document.documentElement.style.fontSize = `${TEXT_SIZES_PX[state.profile.textSize]}px`;
+    document.documentElement.style.fontSize = "";
   }, [state.profile.textSize]);
 
   const todayKey = dateKey();
